@@ -3,7 +3,7 @@ services:
     name: wiki-premium-desktop
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "waitress-serve --host=0.0.0.0 --port=$PORT wiki_project.wsgi:application"
+    startCommand: "gunicorn wiki_project.wsgi:application"
     envVars:
       - key: DEBUG
         value: "False"
