@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Wiki Interna</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { red: '#AC2407', redhov: '#8f1d06', yellow: '#EFBC00', yellhov: '#d4a800' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-brand-red min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+
+    <!-- Logo card -->
+    <div class="text-center mb-8">
+      <img src="{% static 'images/logo.jpg' %}" alt="Logo" class="h-20 w-auto object-contain mx-auto mb-4 drop-shadow-lg" />
+      <h1 class="text-white text-2xl font-bold tracking-wide">Acesso Administrativo</h1>
+      <p class="text-white/60 text-sm mt-1">Área restrita — somente administradores</p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-2xl shadow-2xl p-8">
+      {% if error %}
+      <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Usuário</label>
+          <input
+            type="text" name="username" required autofocus
+            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent"
+            placeholder="Digite seu usuário"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Senha</label>
+          <input
+            type="password" name="password" required
+            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent"
+            placeholder="Digite sua senha"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-brand-red text-white font-bold py-3 rounded-lg hover:bg-brand-redhov transition text-sm tracking-wide">
+          Entrar
+        </button>
+      </form>
+    </div>
+
+  </div>
+</body>
+</html>

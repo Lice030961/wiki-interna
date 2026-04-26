@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Wiki{% endblock %} — Wiki Interna</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              red:    '#AC2407',
+              redhov: '#8f1d06',
+              yellow: '#EFBC00',
+              yellhov:'#d4a800',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .search-dropdown { max-height: 320px; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-white text-gray-900 min-h-screen flex flex-col">
+
+  <header class="bg-brand-red shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+
+      <a href="{% url 'home' %}" class="flex items-center gap-2 shrink-0">
+        <img src="{% static 'images/logo.jpg' %}" alt="Logo" class="h-10 w-auto object-contain" />
+        <span class="text-white font-bold text-lg hidden sm:block tracking-wide">Wiki Interna</span>
+      </a>
+
+      <div class="flex-1 relative">
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Pesquisar tópicos..."
+          autocomplete="off"
+          class="w-full px-4 py-2 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+        />
+        <div id="search-dropdown"
+             class="search-dropdown hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-y-auto z-50">
+        </div>
+      </div>
+
+      <nav class="flex items-center gap-2 shrink-0">
+        {% if user.is_authenticated and user.is_staff or user.is_authenticated and user.is_superuser %}
+        <a href="{% url 'admin_dashboard' %}"
+           class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">
+          Painel Admin
+        </a>
+        <a href="{% url 'logout' %}"
+           class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">
+          Sair
+        </a>
+        {% else %}
+        <a href="{% url 'login' %}"
+           class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">
+          Entrar como Admin
+        </a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  {% if messages %}
+  <div class="max-w-7xl mx-auto px-4 mt-4 w-full">
+    {% for message in messages %}
+    <div class="mb-2 px-4 py-3 rounded-lg text-sm font-medium
+      {% if message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <main class="flex-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="bg-brand-red mt-8">
+    <div class="max-w-7xl mx-auto px-4 py-4 text-center text-white/60 text-xs">
+      Wiki Interna — Uso restrito à equipe
+    </div>
+  </footer>
+
+  <script src="{% static 'js/search.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

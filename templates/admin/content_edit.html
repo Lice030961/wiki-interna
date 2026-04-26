@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}Editar Conteúdo – {{ topic.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-10">
+
+  <div class="mb-6 flex items-center gap-2 text-sm text-gray-400">
+    <a href="{% url 'admin_dashboard' %}" class="hover:text-brand-red transition">Painel</a>
+    <span>/</span>
+    <span class="text-gray-700">{{ major.title }}</span>
+    <span>/</span>
+    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+  </div>
+
+  <div class="flex items-center justify-between mb-8">
+    <h1 class="text-2xl font-extrabold text-gray-900">Editar: {{ topic.title }}</h1>
+    <a href="{% url 'minor_topic' major.slug topic.slug %}"
+       class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
+      Ver página
+    </a>
+  </div>
+
+  <!-- Existing blocks -->
+  <div id="blocks-container" class="space-y-4 mb-8">
+    {% for block in blocks %}
+    <div class="border-2 border-gray-100 rounded-2xl overflow-hidden" data-block-id="{{ block.id }}">
+      <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
+        <span class="text-lg">
+          {% if block.block_type == 'text' %}📝
+          {% elif block.block_type == 'checklist' %}✅
+          {% elif block.block_type == 'image' %}🖼️
+          {% elif block.block_type == 'video' %}🎬
+          {% endif %}
+        </span>
+        <span class="font-semibold text-sm text-gray-700 flex-1">
+          {{ block.get_block_type_display }}{% if block.title %}: {{ block.title }}{% endif %}
+        </span>
+        <div class="flex gap-2">
+          <a href="{% url 'admin_block_edit' block.id %}"
+             class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+            Editar
+          </a>
+          <form method="post" action="{% url 'admin_block_delete' block.id %}" onsubmit="return confirm('Excluir este bloco?')">
+            {% csrf_token %}
+            <button type="submit" class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+              Excluir
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="px-4 py-3 text-sm text-gray-600 bg-white">
+        {% if block.block_type == 'text' or block.block_type == 'checklist' %}
+        <p class="line-clamp-3 whitespace-pre-wrap text-xs">{{ block.content|truncatechars:200 }}</p>
+        {% elif block.file %}
+        <p class="text-xs text-gray-400">Arquivo: {{ block.file.name }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+      <p class="text-4xl mb-2">📭</p>
+      <p class="text-sm">Nenhum bloco ainda. Adicione abaixo.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Add new block -->
+  <div class="bg-white border-2 border-brand-yellow rounded-2xl p-6">
+    <h2 class="text-base font-bold text-gray-900 mb-5">Adicionar Bloco</h2>
+
+    <form method="post" action="{% url 'admin_block_add' major.slug topic.slug %}" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {% for val, label in block_types %}
+        <label class="flex items-center gap-2 p-3 border-2 rounded-xl cursor-pointer transition
+                      has-[:checked]:border-brand-red has-[:checked]:bg-red-50 border-gray-200 hover:border-gray-300">
+          <input type="radio" name="block_type" value="{{ val }}" {% if forloop.first %}checked{% endif %} class="accent-brand-red" />
+          <span class="text-sm font-medium">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Título do bloco (opcional)</label>
+        <input type="text" name="title"
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
+        <textarea name="content" rows="5"
+                  placeholder="Para texto: escreva o conteúdo. Para checklist: um item por linha. Para imagem/vídeo: legenda opcional."
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Arquivo (imagem ou vídeo)</label>
+        <input type="file" name="file" accept="image/*,video/*"
+               class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
+      </div>
+
+      <button type="submit"
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
+        Adicionar Bloco
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Pass block_types from Python to the template — we hardcode here since they're fixed
+// (already rendered via template above via context — no JS needed for the radio)
+</script>
+{% endblock %}

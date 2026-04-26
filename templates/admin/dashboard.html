@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Painel Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10">
+
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-extrabold text-gray-900">Painel Admin</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Gerencie tópicos e conteúdo da wiki</p>
+    </div>
+    <a href="{% url 'admin_major_topic_create' %}"
+       class="bg-brand-red text-white font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-brand-redhov transition">
+      + Novo Tópico Principal
+    </a>
+  </div>
+
+  {% if major_topics %}
+  <div class="space-y-4">
+    {% for major in major_topics %}
+    <div class="border-2 border-gray-100 rounded-2xl overflow-hidden">
+
+      <!-- Major topic row -->
+      <div class="flex items-center gap-3 p-4 bg-gray-50">
+        <span class="text-xl">{{ major.icon|default:"📁" }}</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-gray-900">{{ major.title }}</p>
+          {% if major.description %}
+          <p class="text-xs text-gray-400 mt-0.5 truncate">{{ major.description }}</p>
+          {% endif %}
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <a href="{% url 'admin_minor_topic_create' major.slug %}"
+             class="bg-brand-yellow text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition">
+            + Sub-tópico
+          </a>
+          <a href="{% url 'admin_major_topic_edit' major.slug %}"
+             class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+            Editar
+          </a>
+          <a href="{% url 'major_topic' major.slug %}"
+             class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+            Ver
+          </a>
+          <form method="post" action="{% url 'admin_major_topic_delete' major.slug %}" onsubmit="return confirm('Excluir este tópico e todos os sub-tópicos?')">
+            {% csrf_token %}
+            <button type="submit" class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+              Excluir
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Minor topics -->
+      {% if major.minor_topics.all %}
+      <div class="divide-y divide-gray-100">
+        {% for minor in major.minor_topics.all %}
+        <div class="flex items-center gap-3 px-4 py-3 pl-10">
+          <span class="text-base">{{ minor.icon|default:"📄" }}</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-gray-800 text-sm">{{ minor.title }}</p>
+            {% if minor.description %}
+            <p class="text-xs text-gray-400 truncate">{{ minor.description }}</p>
+            {% endif %}
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <a href="{% url 'admin_content_edit' major.slug minor.slug %}"
+               class="bg-brand-red text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-redhov transition">
+              Conteúdo
+            </a>
+            <a href="{% url 'admin_minor_topic_edit' major.slug minor.slug %}"
+               class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+              Editar
+            </a>
+            <a href="{% url 'minor_topic' major.slug minor.slug %}"
+               class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+              Ver
+            </a>
+            <form method="post" action="{% url 'admin_minor_topic_delete' major.slug minor.slug %}" onsubmit="return confirm('Excluir este sub-tópico?')">
+              {% csrf_token %}
+              <button type="submit" class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                Excluir
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="px-10 py-3 text-xs text-gray-400 italic">Nenhum sub-tópico. Clique em "+ Sub-tópico" para criar.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-20 text-gray-400">
+    <p class="text-6xl mb-4">📭</p>
+    <p class="font-semibold text-gray-600">Nenhum tópico criado ainda.</p>
+    <p class="text-sm mt-1">Clique em "+ Novo Tópico Principal" para começar.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

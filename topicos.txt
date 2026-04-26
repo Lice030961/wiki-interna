@@ -1,0 +1,248 @@
+📌 BUSCA RÁPIDA
+
+🔎 Pesquise por:
+- SA
+- INC
+- GLPI
+- Telefonia
+- Massiva
+- Cliente
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 FLUXO DE ATENDIMENTO
+
+👉 🔍 LOCALIZAR CLIENTE
+👉 🧠 IDENTIFICAR SOLICITAÇÃO
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 TIPOS DE ATENDIMENTO
+
+🛠️ 👉 MANUTENÇÃO
+🚨 👉 MASSIVA
+🏗️ 👉 INSTALAÇÃO
+🔄 👉 MUDANÇA DE PLANO
+📍 👉 MUDANÇA DE PONTO
+⚙️ 👉 REQUISIÇÕES
+☎️ 👉 TELEFONIA
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 TUTORIAIS RÁPIDOS
+
+📄 👉 COMO LOCALIZAR CLIENTE
+📄 👉 COMO CRIAR SA
+📄 👉 ERROS AO ABRIR SA
+📄 👉 COMO ABRIR GLPI
+📄 👉 IDENTIFICAR PROBLEMA
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 GLOSSÁRIO
+
+👉 ACESSAR SIGLAS DO SISTEMA
+
+
+
+
+📌 BUSCA RÁPIDA
+
+🔎 Pesquise por:
+- SA
+- INC
+- GLPI
+- Telefonia
+- Massiva
+- Cliente
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 FLUXO DE ATENDIMENTO
+
+👉 🔍 LOCALIZAR CLIENTE
+👉 🧠 IDENTIFICAR SOLICITAÇÃO
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 TIPOS DE ATENDIMENTO
+
+🛠️ 👉 MANUTENÇÃO
+🚨 👉 MASSIVA
+🏗️ 👉 INSTALAÇÃO
+🔄 👉 MUDANÇA DE PLANO
+📍 👉 MUDANÇA DE PONTO
+⚙️ 👉 REQUISIÇÕES
+☎️ 👉 TELEFONIA
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 TUTORIAIS RÁPIDOS
+
+📄 👉 COMO LOCALIZAR CLIENTE
+📄 👉 COMO CRIAR SA
+📄 👉 ERROS AO ABRIR SA
+📄 👉 COMO ABRIR GLPI
+📄 👉 IDENTIFICAR PROBLEMA
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📌 GLOSSÁRIO
+
+👉 ACESSAR SIGLAS DO SISTEMA
+
+📌 MANUTENÇÃO
+
+📍 CHECKLIST DE ATENDIMENTO
+
+☐ Cliente localizado no SIS  
+☐ Solicitação analisada  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ORIGEM DO PROBLEMA
+
+👉 IDENTIFICAR PROBLEMA
+
+☐ Problema interno (cliente)  
+☐ Problema externo (empresa)  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 SE FOR PROBLEMA DA EMPRESA
+
+☐ Criar SA no :contentReference[oaicite:1]{index=1}  
+
+👉 COMO CRIAR SA  
+
+☐ Houve erro?
+
+👉 ERROS AO ABRIR SA  
+
+☐ Não resolveu?
+
+👉 ABRIR GLPI  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 PÓS-CRIAÇÃO DE SA
+
+☐ Adicionar na planilha COP  
+☐ Adicionar na planilha Remedy Premium  
+☐ Encerrar INC  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 OBSERVAÇÕES
+
+- SA deve conter script padrão  
+- Corrigir endereço (caso ADM tenha múltiplos links)  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ATENÇÃO
+
+⚠️ Caso sem SA:
+- Manter INC aberto  
+- Acionar COP  
+- Monitorar manualmente  
+
+📌 TELEFONIA (ATA / VOIP)
+
+📍 CHECKLIST INICIAL
+
+☐ Link está funcionando  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 TIPO DE TELEFONIA
+
+☐ ATA (bridge)  
+☐ VOIP (integrado ao plano)  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 VALIDAÇÃO DE LINHAS
+
+☐ Linhas registradas no sistema?
+
+🔹 NÃO:
+☐ Abrir Lecom (STFC)  
+☐ Solicitar “forçar registro”  
+☐ Validar com cliente  
+
+🔹 SIM:
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 TESTES
+
+☐ Verificar cabeamento  
+☐ Inverter pontas  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 TIPO DE USO
+
+☐ Telefone comum  
+☐ PABX  
+
+🔹 Se PABX:
+☐ Solicitar isolamento da linha  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 RESULTADO
+
+☐ Normalizou → Encerrar  
+☐ Não normalizou → Abrir visita técnica  
+
+📌 MASSIVA
+
+☐ Cliente localizado no SIS  
+
+☐ Verificada notificação de massiva  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 AÇÃO
+
+☐ Informar cliente via INC  
+☐ Informar previsão  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 APÓS NORMALIZAÇÃO
+
+☐ Normalizou → Encerrar INC  
+☐ Não normalizou → Seguir MANUTENÇÃO  
+
+📌 REQUISIÇÕES
+
+☐ Validar necessidade de SA  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 AÇÃO
+
+☐ Acionar NOC  
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📍 OBS
+
+- Nem toda requisição precisa de SA  
+
+📌 COMO CRIAR SA
+
+1. Acessar sistema  
+2. Localizar cliente  
+3. Criar SA  
+4. Preencher dados  
+5. Inserir script padrão  
+6. Corrigir endereço (se necessário)  
+7. Salvar  
+
+📍 IMPORTANTE
+
+- Validar dados antes de salvar

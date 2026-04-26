@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}{{ topic.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-10">
+
+  <!-- Breadcrumb -->
+  <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6 flex-wrap">
+    <a href="{% url 'home' %}" class="hover:text-brand-red transition">Início</a>
+    <span>/</span>
+    <a href="{% url 'major_topic' major.slug %}" class="hover:text-brand-red transition">{{ major.title }}</a>
+    <span>/</span>
+    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+  </nav>
+
+  <!-- Header -->
+  <div class="flex items-start gap-4 mb-8">
+    <div class="w-12 h-12 bg-brand-yellow rounded-xl flex items-center justify-center text-white text-2xl shrink-0">
+      {{ topic.icon|default:"📄" }}
+    </div>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl font-extrabold text-gray-900">{{ topic.title }}</h1>
+      {% if topic.description %}
+      <p class="text-gray-500 text-sm mt-0.5">{{ topic.description }}</p>
+      {% endif %}
+    </div>
+    {% if user.is_staff or user.is_superuser %}
+    <a href="{% url 'admin_content_edit' major.slug topic.slug %}"
+       class="shrink-0 bg-brand-red text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-brand-redhov transition">
+      Editar Conteúdo
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Content blocks -->
+  <div class="space-y-6">
+    {% for block in blocks %}
+
+    {% if block.block_type == 'text' %}
+    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
+      <div class="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">{{ block.content }}</div>
+    </div>
+
+    {% elif block.block_type == 'checklist' %}
+    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
+      <div class="space-y-2">
+        {% for line in block.content.splitlines %}
+        {% if line.strip %}
+        <label class="flex items-start gap-3 cursor-pointer group">
+          <input type="checkbox" class="mt-0.5 w-4 h-4 accent-brand-red rounded" />
+          <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ line }}</span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    {% elif block.block_type == 'image' %}
+    <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
+      {% if block.file %}
+      <img src="{{ block.file.url }}" alt="{{ block.title }}" class="rounded-xl max-w-full h-auto" />
+      {% endif %}
+      {% if block.content %}<p class="text-xs text-gray-400 mt-2">{{ block.content }}</p>{% endif %}
+    </div>
+
+    {% elif block.block_type == 'video' %}
+    <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
+      {% if block.file %}
+      <video controls class="rounded-xl w-full max-h-96">
+        <source src="{{ block.file.url }}" />
+        Seu navegador não suporta vídeo.
+      </video>
+      {% endif %}
+      {% if block.content %}<p class="text-xs text-gray-400 mt-2">{{ block.content }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% empty %}
+    <div class="text-center py-16 text-gray-400">
+      <p class="text-5xl mb-3">📝</p>
+      <p class="text-sm">Nenhum conteúdo ainda.</p>
+      {% if user.is_staff or user.is_superuser %}
+      <a href="{% url 'admin_content_edit' major.slug topic.slug %}" class="mt-4 inline-block text-brand-red font-semibold text-sm underline">Adicionar conteúdo</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

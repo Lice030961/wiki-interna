@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Editar Bloco{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-10">
+  <div class="mb-6">
+    <a href="{% url 'admin_content_edit' block.minor_topic.major_topic.slug block.minor_topic.slug %}"
+       class="text-sm text-brand-red hover:underline">&larr; Voltar</a>
+  </div>
+
+  <h1 class="text-2xl font-extrabold text-gray-900 mb-8">Editar Bloco</h1>
+
+  <form method="post" enctype="multipart/form-data" class="space-y-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo</label>
+      <p class="text-sm text-gray-500">{{ block.get_block_type_display }}</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Título do bloco</label>
+      <input type="text" name="title" value="{{ block.title }}"
+             class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
+      <textarea name="content" rows="6"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y">{{ block.content }}</textarea>
+    </div>
+
+    {% if block.block_type == 'image' or block.block_type == 'video' %}
+    <div>
+      {% if block.file %}
+      <p class="text-xs text-gray-400 mb-2">Arquivo atual: {{ block.file.name }}</p>
+      {% endif %}
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Substituir arquivo</label>
+      <input type="file" name="file" accept="image/*,video/*"
+             class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
+    </div>
+    {% endif %}
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
+        Salvar
+      </button>
+      <a href="{% url 'admin_content_edit' block.minor_topic.major_topic.slug block.minor_topic.slug %}"
+         class="border border-gray-300 text-gray-600 px-6 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
+        Cancelar
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}
