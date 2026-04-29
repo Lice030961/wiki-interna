@@ -226,7 +226,7 @@ def admin_block_edit(request, block_id):
             block.file = request.FILES['file']
         block.save()
         return redirect('admin_content_edit', major_slug=major_slug, minor_slug=minor_slug)
-    return render(request, 'admin/block_edit.html', {'block': block})
+    return render(request, 'admin/block_edit.html', {'content_block': block})
 
 
 @login_required

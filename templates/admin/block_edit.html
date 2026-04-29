@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-xl mx-auto px-4 py-10">
   <div class="mb-6">
-    <a href="{% url 'admin_content_edit' block.minor_topic.major_topic.slug block.minor_topic.slug %}"
+    <a href="{% url 'admin_content_edit' content_block.minor_topic.major_topic.slug content_block.minor_topic.slug %}"
        class="text-sm text-brand-red hover:underline">&larr; Voltar</a>
   </div>
 
@@ -15,25 +15,25 @@
 
     <div>
       <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo</label>
-      <p class="text-sm text-gray-500">{{ block.get_block_type_display }}</p>
+      <p class="text-sm text-gray-500">{{ content_block.get_block_type_display }}</p>
     </div>
 
     <div>
       <label class="block text-sm font-semibold text-gray-700 mb-1">Título do bloco</label>
-      <input type="text" name="title" value="{{ block.title }}"
+      <input type="text" name="title" value="{{ content_block.title }}"
              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
     </div>
 
     <div>
       <label class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
       <textarea name="content" rows="6"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y">{{ block.content }}</textarea>
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y">{{ content_block.content }}</textarea>
     </div>
 
-    {% if block.block_type == 'image' or block.block_type == 'video' %}
+    {% if content_block.block_type == 'image' or content_block.block_type == 'video' %}
     <div>
-      {% if block.file %}
-      <p class="text-xs text-gray-400 mb-2">Arquivo atual: {{ block.file.name }}</p>
+      {% if content_block.file %}
+      <p class="text-xs text-gray-400 mb-2">Arquivo atual: {{ content_block.file.name }}</p>
       {% endif %}
       <label class="block text-sm font-semibold text-gray-700 mb-1">Substituir arquivo</label>
       <input type="file" name="file" accept="image/*,video/*"
@@ -46,7 +46,7 @@
               class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
         Salvar
       </button>
-      <a href="{% url 'admin_content_edit' block.minor_topic.major_topic.slug block.minor_topic.slug %}"
+      <a href="{% url 'admin_content_edit' content_block.minor_topic.major_topic.slug content_block.minor_topic.slug %}"
          class="border border-gray-300 text-gray-600 px-6 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
         Cancelar
       </a>
