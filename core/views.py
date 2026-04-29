@@ -100,8 +100,8 @@ def admin_major_topic_create(request):
         title = request.POST.get('title', '').strip()
         description = request.POST.get('description', '').strip()
         icon = request.POST.get('icon', '').strip()
-        if title:
-            slug = slugify(title)
+        slug = slugify(title)
+        if title and slug:
             base_slug = slug
             counter = 1
             while MajorTopic.objects.filter(slug=slug).exists():
@@ -143,8 +143,8 @@ def admin_minor_topic_create(request, major_slug):
         title = request.POST.get('title', '').strip()
         description = request.POST.get('description', '').strip()
         icon = request.POST.get('icon', '').strip()
-        if title:
-            slug = slugify(title)
+        slug = slugify(title)
+        if title and slug:
             base_slug = slug
             counter = 1
             while MinorTopic.objects.filter(major_topic=major, slug=slug).exists():
