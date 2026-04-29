@@ -23,9 +23,8 @@ Server runs at http://127.0.0.1:8000
 | Role   | Username | Password  |
 |--------|----------|-----------|
 | Admin  | admin    | admin123  |
-| Reader | leitor   | leitor123 |
 
-Change via `.env` → `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `READER_USERNAME`, `READER_PASSWORD`.
+Change via `.env` → `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
 
 ## Key URLs
 | URL | Purpose |

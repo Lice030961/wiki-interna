@@ -18,20 +18,12 @@ class Command(BaseCommand):
     def _create_users(self):
         admin_user = os.getenv('ADMIN_USERNAME', 'admin')
         admin_pass = os.getenv('ADMIN_PASSWORD', 'admin123')
-        reader_user = os.getenv('READER_USERNAME', 'leitor')
-        reader_pass = os.getenv('READER_PASSWORD', 'leitor123')
 
         if not User.objects.filter(username=admin_user).exists():
             User.objects.create_superuser(username=admin_user, password=admin_pass, email='')
             self.stdout.write(f'  Admin "{admin_user}" criado.')
         else:
             self.stdout.write(f'  Admin "{admin_user}" já existe.')
-
-        if not User.objects.filter(username=reader_user).exists():
-            User.objects.create_user(username=reader_user, password=reader_pass, email='')
-            self.stdout.write(f'  Leitor "{reader_user}" criado.')
-        else:
-            self.stdout.write(f'  Leitor "{reader_user}" já existe.')
 
     def _create_topics(self):
         topics = [
