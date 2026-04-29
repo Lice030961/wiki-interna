@@ -1,6 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
+from django.utils.text import slugify
 from dotenv import load_dotenv
 from core.models import MajorTopic, MinorTopic
 
@@ -74,8 +75,8 @@ class Command(BaseCommand):
 
         for i, t in enumerate(topics):
             major, created = MajorTopic.objects.get_or_create(
-                title=t['title'],
-                defaults={'icon': t['icon'], 'description': t['description'], 'order': i},
+                slug=slugify(t['title']),
+                defaults={'title': t['title'], 'icon': t['icon'], 'description': t['description'], 'order': i},
             )
             status = 'criado' if created else 'já existe'
             self.stdout.write(f'  Tópico principal "{major.title}" {status}.')
@@ -83,8 +84,8 @@ class Command(BaseCommand):
             for j, (mt_title, mt_icon, mt_desc) in enumerate(t['minor']):
                 minor, mc = MinorTopic.objects.get_or_create(
                     major_topic=major,
-                    title=mt_title,
-                    defaults={'icon': mt_icon, 'description': mt_desc, 'order': j},
+                    slug=slugify(mt_title),
+                    defaults={'title': mt_title, 'icon': mt_icon, 'description': mt_desc, 'order': j},
                 )
                 ms = 'criado' if mc else 'já existe'
                 self.stdout.write(f'    Sub-tópico "{minor.title}" {ms}.')
