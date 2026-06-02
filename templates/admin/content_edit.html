@@ -1,6 +1,49 @@
 {% extends 'base.html' %}
 {% block title %}Editar Conteúdo – {{ topic.title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .editor-wrap { position: relative; }
+  .editor-highlight {
+    position: absolute;
+    inset: 0;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    font-family: ui-monospace, monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    color: transparent;
+    border: 1px solid transparent;
+    border-radius: 0 0 0.5rem 0.5rem;
+    box-sizing: border-box;
+  }
+  .editor-highlight mark {
+    background: transparent;
+    color: #AC2407;
+    font-weight: 700;
+  }
+  .editor-textarea {
+    position: relative;
+    background: transparent !important;
+    caret-color: #111;
+    z-index: 1;
+  }
+  .fmt-btn {
+    padding: 2px 8px;
+    font-size: 0.875rem;
+    color: #4b5563;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s;
+  }
+  .fmt-btn:hover { background: #e5e7eb; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 py-10">
 
@@ -14,10 +57,16 @@
 
   <div class="flex items-center justify-between mb-2">
     <h1 class="text-2xl font-extrabold text-gray-900">Editar: {{ topic.title }}</h1>
-    <a href="{% url 'minor_topic' major.slug topic.slug %}"
-       class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
-      Ver página
-    </a>
+    <div class="flex gap-2">
+      <a href="{% url 'admin_glossary' %}"
+         class="border border-brand-yellow text-brand-yellow text-sm px-4 py-2 rounded-lg hover:bg-yellow-50 transition">
+        📖 Glossário
+      </a>
+      <a href="{% url 'minor_topic' major.slug topic.slug %}"
+         class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
+        Ver página
+      </a>
+    </div>
   </div>
 
   {% if blocks %}
@@ -26,19 +75,13 @@
   </p>
   {% endif %}
 
-  <!-- Blocos existentes -->
   <div id="blocks-container" class="space-y-3 mb-8">
     {% for block in blocks %}
     <div class="block-item group relative border-2 border-gray-100 rounded-2xl overflow-hidden w-full
-                cursor-grab active:cursor-grabbing
-                hover:border-brand-red hover:shadow-md
+                cursor-grab active:cursor-grabbing hover:border-brand-red hover:shadow-md
                 transition-all duration-150 select-none"
          data-block-id="{{ block.id }}">
-
-      <!-- Borda de hover -->
       <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-red ring-offset-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150"></div>
-
-      <!-- Cabeçalho -->
       <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
         <span class="text-lg flex-shrink-0">
           {% if block.block_type == 'text' %}📝
@@ -65,8 +108,6 @@
           </form>
         </div>
       </div>
-
-      <!-- Preview -->
       <div class="px-4 py-3 text-sm text-gray-600 bg-white">
         {% if block.block_type == 'text' or block.block_type == 'checklist' %}
         <p class="line-clamp-3 whitespace-pre-wrap text-xs">{{ block.content|truncatechars:200 }}</p>
@@ -76,7 +117,6 @@
         <p class="text-xs text-gray-300 italic">Sem conteúdo</p>
         {% endif %}
       </div>
-
     </div>
     {% empty %}
     <div class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
@@ -86,13 +126,10 @@
     {% endfor %}
   </div>
 
-  <!-- Adicionar novo bloco -->
   <div class="bg-white border-2 border-brand-yellow rounded-2xl p-6">
     <h2 class="text-base font-bold text-gray-900 mb-5">Adicionar Bloco</h2>
-
     <form method="post" action="{% url 'admin_block_add' major.slug topic.slug %}" enctype="multipart/form-data" class="space-y-4">
       {% csrf_token %}
-
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {% for val, label in block_types %}
         <label class="flex items-center gap-2 p-3 border-2 rounded-xl cursor-pointer transition
@@ -102,26 +139,41 @@
         </label>
         {% endfor %}
       </div>
-
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Título do bloco (opcional)</label>
         <input type="text" name="title"
                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
       </div>
-
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
-        <textarea name="content" rows="5"
-                  placeholder="Para texto: escreva o conteúdo. Para checklist: um item por linha. Para imagem/vídeo: legenda opcional."
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y"></textarea>
+        <div class="flex items-center gap-1 border border-gray-300 border-b-0 rounded-t-lg px-2 py-1.5 bg-gray-50 flex-wrap">
+          <button type="button" onclick="fmt('content-textarea', 'bold')" class="fmt-btn font-bold" title="Negrito">B</button>
+          <button type="button" onclick="fmt('content-textarea', 'italic')" class="fmt-btn italic" title="Itálico">I</button>
+          <button type="button" onclick="fmt('content-textarea', 'underline')" class="fmt-btn underline" title="Sublinhado">U</button>
+          <button type="button" onclick="fmt('content-textarea', 'strike')" class="fmt-btn line-through" title="Tachado">S</button>
+          <div class="w-px h-4 bg-gray-300 mx-1"></div>
+          <button type="button" onclick="fmt('content-textarea', 'code')" class="fmt-btn font-mono text-xs" title="Código">{ }</button>
+          <div class="w-px h-4 bg-gray-300 mx-1"></div>
+          <button type="button" onclick="insertTerm('content-textarea')"
+                  class="fmt-btn bg-red-50 text-brand-red border border-red-200 font-semibold text-xs px-2"
+                  title="Marcar termo do glossário">
+            📖 Termo
+          </button>
+        </div>
+        <div class="editor-wrap">
+          <div id="content-highlight" class="editor-highlight rounded-b-lg border border-gray-300"></div>
+          <textarea id="content-textarea" name="content" rows="6"
+                    placeholder="Para texto: escreva o conteúdo. Para checklist: um item por linha."
+                    oninput="syncHighlight('content-textarea', 'content-highlight')"
+                    onscroll="syncScroll('content-textarea', 'content-highlight')"
+                    class="editor-textarea w-full border border-gray-300 rounded-b-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y font-mono"></textarea>
+        </div>
       </div>
-
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Arquivo (imagem ou vídeo)</label>
         <input type="file" name="file" accept="image/*,video/*"
                class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
       </div>
-
       <button type="submit"
               class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
         Adicionar Bloco
@@ -131,10 +183,43 @@
 
 </div>
 
+<!-- Modal de Termo -->
+<div id="term-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 opacity-0 pointer-events-none" style="transition: opacity 0.15s;">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+    <h3 class="text-base font-extrabold text-gray-900 mb-1">📖 Cadastrar Termo</h3>
+    <p class="text-xs text-gray-400 mb-4">O termo ficará em vermelho com tooltip na página.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Termo</label>
+        <input id="modal-term-input" type="text" readonly
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 font-semibold text-brand-red" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Definição</label>
+        <textarea id="modal-def-input" rows="3" placeholder="Explique o que significa este termo..."
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-none"></textarea>
+      </div>
+      <div id="existing-def-box" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
+        <span class="font-semibold">Definição atual:</span>
+        <span id="existing-def-text"></span>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="saveTerm()"
+              class="flex-1 bg-brand-red text-white font-bold px-4 py-2 rounded-lg hover:bg-brand-redhov transition text-sm">
+        Salvar
+      </button>
+      <button onclick="closeTermModal()"
+              class="flex-1 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition text-sm">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="reorder-toast"
      class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
-  ✓ Ordem salva
 </div>
 
 {% endblock %}
@@ -142,45 +227,163 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
-const csrfToken = '{{ csrf_token }}';
-const reorderUrl = '{% url "admin_block_reorder" %}';
+// ── Variáveis globais (declaradas primeiro) ───────────────────────────────────
+var activeTextareaId = null;
+var glossaryTerms = [];
+var CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+var REORDER_URL = '{% url "admin_block_reorder" %}';
+var GLOSSARY_SAVE_URL = '{% url "admin_glossary_save" %}';
+var MARKERS = { bold: '**', italic: '_', underline: '__', strike: '~~', code: '`' };
 
-function showToast(msg = '✓ Ordem salva') {
-  const toast = document.getElementById('reorder-toast');
-  toast.textContent = msg;
-  toast.classList.remove('opacity-0');
-  toast.classList.add('opacity-100');
-  setTimeout(() => {
-    toast.classList.remove('opacity-100');
-    toast.classList.add('opacity-0');
-  }, 2000);
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  var t = document.getElementById('reorder-toast');
+  t.textContent = msg;
+  t.classList.remove('opacity-0'); t.classList.add('opacity-100');
+  setTimeout(function() { t.classList.remove('opacity-100'); t.classList.add('opacity-0'); }, 2200);
 }
 
-const blocksContainer = document.getElementById('blocks-container');
-if (blocksContainer) {
-  Sortable.create(blocksContainer, {
-    animation: 200,
-    ghostClass: 'opacity-30',
-    chosenClass: 'shadow-xl',
-    dragClass: 'shadow-2xl',
-    onEnd() {
-      const items = blocksContainer.querySelectorAll('.block-item');
-      const orderPayload = Array.from(items).map((el, index) => ({
-        id: parseInt(el.dataset.blockId),
-        order: index,
-      }));
-      fetch(reorderUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
-        body: JSON.stringify({ order: orderPayload }),
-      })
-        .then(res => res.ok ? showToast() : showToast('⚠ Erro ao salvar ordem'))
-        .catch(() => showToast('⚠ Erro ao salvar ordem'));
-    },
+// ── Formatação ────────────────────────────────────────────────────────────────
+function fmt(taId, type) {
+  var ta = document.getElementById(taId);
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  var sel = ta.value.substring(s, e);
+  if (!sel) return;
+  var m = MARKERS[type];
+  ta.value = ta.value.substring(0, s) + m + sel + m + ta.value.substring(e);
+  ta.focus();
+  ta.setSelectionRange(s + m.length, s + m.length + sel.length);
+  syncHighlight(taId, taId.replace('textarea', 'highlight'));
+}
+
+// ── Highlight ─────────────────────────────────────────────────────────────────
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function buildHighlight(text) {
+  if (!glossaryTerms.length) return escapeHtml(text);
+  var result = escapeHtml(text);
+  var sorted = glossaryTerms.slice().sort(function(a, b) { return b.term.length - a.term.length; });
+  sorted.forEach(function(t) {
+    var esc = t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var re = new RegExp('(?<![\\w\\u00C0-\\u024F])(' + esc + ')(?![\\w\\u00C0-\\u024F])', 'gi');
+    result = result.replace(re, '<mark>$1</mark>');
+  });
+  return result;
+}
+
+function syncHighlight(taId, hlId) {
+  var ta = document.getElementById(taId);
+  var hl = document.getElementById(hlId);
+  if (!ta || !hl) return;
+  hl.innerHTML = buildHighlight(ta.value) + '\n';
+  hl.style.height = ta.offsetHeight + 'px';
+}
+
+function syncScroll(taId, hlId) {
+  var ta = document.getElementById(taId);
+  var hl = document.getElementById(hlId);
+  if (ta && hl) hl.scrollTop = ta.scrollTop;
+}
+
+// ── Modal de Termo ────────────────────────────────────────────────────────────
+function insertTerm(taId) {
+  var ta = document.getElementById(taId);
+  if (!ta) return;
+  var selected = ta.value.substring(ta.selectionStart, ta.selectionEnd).trim();
+  if (!selected) {
+    alert('Selecione o texto que deseja marcar como termo antes de clicar em "Termo".');
+    return;
+  }
+  activeTextareaId = taId;
+  openTermModal(selected);
+}
+
+function openTermModal(term) {
+  document.getElementById('modal-term-input').value = term;
+  document.getElementById('modal-def-input').value = '';
+  var existing = null;
+  for (var i = 0; i < glossaryTerms.length; i++) {
+    if (glossaryTerms[i].term.toLowerCase() === term.toLowerCase()) { existing = glossaryTerms[i]; break; }
+  }
+  var box = document.getElementById('existing-def-box');
+  if (existing) {
+    document.getElementById('existing-def-text').textContent = ' ' + existing.definition;
+    document.getElementById('modal-def-input').value = existing.definition;
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+  var modal = document.getElementById('term-modal');
+  modal.classList.remove('opacity-0', 'pointer-events-none');
+  setTimeout(function() { document.getElementById('modal-def-input').focus(); }, 50);
+}
+
+function closeTermModal() {
+  document.getElementById('term-modal').classList.add('opacity-0', 'pointer-events-none');
+  activeTextareaId = null;
+}
+
+function saveTerm() {
+  var term = document.getElementById('modal-term-input').value.trim();
+  var definition = document.getElementById('modal-def-input').value.trim();
+  if (!definition) { document.getElementById('modal-def-input').focus(); return; }
+
+  fetch(GLOSSARY_SAVE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify({ term: term, definition: definition }),
+  }).then(function(res) { return res.json(); }).then(function(data) {
+    if (data.ok) {
+      var idx = -1;
+      for (var i = 0; i < glossaryTerms.length; i++) {
+        if (glossaryTerms[i].term.toLowerCase() === term.toLowerCase()) { idx = i; break; }
+      }
+      if (idx >= 0) glossaryTerms[idx] = { term: data.term, definition: data.definition };
+      else glossaryTerms.push({ term: data.term, definition: data.definition });
+
+      if (activeTextareaId) syncHighlight(activeTextareaId, activeTextareaId.replace('textarea', 'highlight'));
+      showToast(data.created ? '✓ Termo cadastrado!' : '✓ Termo atualizado!');
+      closeTermModal();
+    } else {
+      alert(data.error || 'Erro ao salvar termo.');
+    }
   });
 }
+
+// ── Drag blocos ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  glossaryTerms = JSON.parse(document.getElementById('glossary-data').textContent);  // ← adiciona aqui
+  syncHighlight('content-textarea', 'content-highlight');
+
+  var blocksContainer = document.getElementById('blocks-container');
+  if (blocksContainer) {
+    Sortable.create(blocksContainer, {
+      animation: 200, ghostClass: 'opacity-30', chosenClass: 'shadow-xl', dragClass: 'shadow-2xl',
+      onEnd: function() {
+        var items = blocksContainer.querySelectorAll('.block-item');
+        var payload = Array.from(items).map(function(el, i) { return { id: parseInt(el.dataset.blockId), order: i }; });
+        fetch(REORDER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ order: payload }),
+        }).then(function(r) { showToast(r.ok ? '✓ Ordem salva' : '⚠ Erro ao salvar ordem'); });
+      },
+    });
+  }
+
+  document.getElementById('term-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeTermModal();
+  });
+
+  document.getElementById('modal-def-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveTerm(); }
+  });
+});
 </script>
+
+<!-- Dados do glossário passados com segurança via JSON tag -->
+<script id="glossary-data" type="application/json">{{ glossary_terms|safe }}</script>
+
 {% endblock %}

@@ -1,16 +1,47 @@
+import re
 import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.utils.text import slugify
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 from django.db.models import Q
 
-from .models import MajorTopic, MinorTopic, ContentBlock
+from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm
 
 
 def is_admin(user):
     return user.is_staff or user.is_superuser
+
+
+def apply_glossary(text, terms):
+    """
+    Substitui ocorrências dos termos do glossário no texto por spans com tooltip.
+    Faz correspondência case-insensitive e por palavra inteira.
+    Retorna HTML seguro.
+    """
+    if not terms:
+        return mark_safe(escape(text).replace('\n', '<br>'))
+
+    # Ordena do maior para o menor para evitar substituições parciais (ex: "Caso de Uso" antes de "Uso")
+    sorted_terms = sorted(terms, key=lambda t: len(t.term), reverse=True)
+
+    escaped = escape(text)
+
+    for term_obj in sorted_terms:
+        pattern = re.compile(r'(?<!\w)(' + re.escape(escape(term_obj.term)) + r')(?!\w)', re.IGNORECASE)
+        tooltip_def = escape(term_obj.definition).replace('"', '&quot;')
+        replacement = (
+            f'<span class="glossary-term" '
+            f'data-term="{escape(term_obj.term)}" '
+            f'data-def="{tooltip_def}">'
+            f'\\1</span>'
+        )
+        escaped = pattern.sub(replacement, escaped)
+
+    return mark_safe(escaped.replace('\n', '<br>'))
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -81,7 +112,20 @@ def minor_topic(request, major_slug, minor_slug):
     major = get_object_or_404(MajorTopic, slug=major_slug)
     topic = get_object_or_404(MinorTopic, major_topic=major, slug=minor_slug)
     blocks = topic.blocks.all()
-    return render(request, 'minor_topic.html', {'major': major, 'topic': topic, 'blocks': blocks})
+    terms = GlossaryTerm.objects.all()
+
+    # Processa blocos de texto aplicando o glossário
+    processed_blocks = []
+    for block in blocks:
+        if block.block_type in ('text', 'checklist'):
+            block.rendered_content = apply_glossary(block.content, terms)
+        processed_blocks.append(block)
+
+    return render(request, 'minor_topic.html', {
+        'major': major,
+        'topic': topic,
+        'blocks': processed_blocks,
+    })
 
 
 # ── Admin: Manage Topics ──────────────────────────────────────────────────────
@@ -188,11 +232,13 @@ def admin_content_edit(request, major_slug, minor_slug):
     major = get_object_or_404(MajorTopic, slug=major_slug)
     topic = get_object_or_404(MinorTopic, major_topic=major, slug=minor_slug)
     blocks = topic.blocks.all()
+    terms = GlossaryTerm.objects.all()
     return render(request, 'admin/content_edit.html', {
         'major': major,
         'topic': topic,
         'blocks': blocks,
         'block_types': ContentBlock.BLOCK_TYPES,
+        'glossary_terms': list(terms.values('term', 'definition')),
     })
 
 
@@ -226,7 +272,11 @@ def admin_block_edit(request, block_id):
             block.file = request.FILES['file']
         block.save()
         return redirect('admin_content_edit', major_slug=major_slug, minor_slug=minor_slug)
-    return render(request, 'admin/block_edit.html', {'content_block': block})
+    terms = GlossaryTerm.objects.all()
+    return render(request, 'admin/block_edit.html', {
+        'content_block': block,
+        'glossary_terms': list(terms.values('term', 'definition')),
+    })
 
 
 @login_required
@@ -243,7 +293,6 @@ def admin_block_delete(request, block_id):
 @login_required
 @user_passes_test(is_admin)
 def admin_block_reorder(request):
-    """Reordena ContentBlocks via drag-and-drop (chamada AJAX)."""
     if request.method == 'POST':
         data = json.loads(request.body)
         for item in data.get('order', []):
@@ -255,7 +304,6 @@ def admin_block_reorder(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_major_topic_reorder(request):
-    """Reordena MajorTopics via drag-and-drop (chamada AJAX)."""
     if request.method == 'POST':
         data = json.loads(request.body)
         for item in data.get('order', []):
@@ -267,7 +315,6 @@ def admin_major_topic_reorder(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_minor_topic_reorder(request, major_slug):
-    """Reordena MinorTopics de um MajorTopic via drag-and-drop (chamada AJAX)."""
     major = get_object_or_404(MajorTopic, slug=major_slug)
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -275,3 +322,50 @@ def admin_minor_topic_reorder(request, major_slug):
             MinorTopic.objects.filter(id=item['id'], major_topic=major).update(order=item['order'])
         return JsonResponse({'ok': True})
     return JsonResponse({'ok': False}, status=400)
+
+
+# ── Admin: Glossário ──────────────────────────────────────────────────────────
+
+@login_required
+@user_passes_test(is_admin)
+def admin_glossary(request):
+    """Lista todos os termos do glossário."""
+    terms = GlossaryTerm.objects.all()
+    return render(request, 'admin/glossary.html', {'terms': terms})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_glossary_save(request):
+    """Cria ou atualiza um termo via AJAX (chamado pelo editor de conteúdo)."""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        term_text = data.get('term', '').strip()
+        definition = data.get('definition', '').strip()
+        if term_text and definition:
+            obj, created = GlossaryTerm.objects.update_or_create(
+                term__iexact=term_text,
+                defaults={'term': term_text, 'definition': definition},
+            )
+            return JsonResponse({'ok': True, 'created': created, 'term': obj.term, 'definition': obj.definition})
+        return JsonResponse({'ok': False, 'error': 'Termo e definição são obrigatórios.'}, status=400)
+    return JsonResponse({'ok': False}, status=400)
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_glossary_delete(request, term_id):
+    """Exclui um termo do glossário."""
+    term = get_object_or_404(GlossaryTerm, id=term_id)
+    if request.method == 'POST':
+        term.delete()
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_glossary_list(request):
+    """Retorna todos os termos como JSON (para o editor carregar)."""
+    terms = list(GlossaryTerm.objects.values('id', 'term', 'definition'))
+    return JsonResponse({'terms': terms})

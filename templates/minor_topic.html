@@ -1,10 +1,68 @@
 {% extends 'base.html' %}
 {% block title %}{{ topic.title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .glossary-term {
+    color: #AC2407;
+    font-weight: 600;
+    cursor: help;
+    position: relative;
+    display: inline;
+  }
+
+  .glossary-term::after {
+    content: attr(data-def);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #1f2937;
+    color: #f9fafb;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 6px 10px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    max-width: 240px;
+    min-width: 120px;
+    text-align: left;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 100;
+  }
+
+  .glossary-term:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .glossary-term::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 1px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 101;
+  }
+
+  .glossary-term:hover::before {
+    opacity: 1;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 py-10">
 
-  <!-- Breadcrumb -->
   <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6 flex-wrap">
     <a href="{% url 'home' %}" class="hover:text-brand-red transition">Início</a>
     <span>/</span>
@@ -13,7 +71,6 @@
     <span class="text-gray-700 font-medium">{{ topic.title }}</span>
   </nav>
 
-  <!-- Header -->
   <div class="flex items-start gap-4 mb-8">
     <div class="w-12 h-12 bg-brand-yellow rounded-xl flex items-center justify-center text-white text-2xl shrink-0">
       {{ topic.icon|default:"📄" }}
@@ -32,14 +89,13 @@
     {% endif %}
   </div>
 
-  <!-- Content blocks -->
   <div class="space-y-6">
     {% for block in blocks %}
 
     {% if block.block_type == 'text' %}
     <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
       {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
-      <div class="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">{{ block.content }}</div>
+      <div class="prose prose-sm max-w-none text-gray-700">{{ block.rendered_content }}</div>
     </div>
 
     {% elif block.block_type == 'checklist' %}

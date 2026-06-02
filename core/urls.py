@@ -26,8 +26,14 @@ urlpatterns = [
     path('admin-wiki/bloco/<int:block_id>/editar/', views.admin_block_edit, name='admin_block_edit'),
     path('admin-wiki/bloco/<int:block_id>/excluir/', views.admin_block_delete, name='admin_block_delete'),
 
-    # Reordenação via drag-and-drop (AJAX)
+    # Reordenação via drag-and-drop
     path('admin-wiki/bloco/reordenar/', views.admin_block_reorder, name='admin_block_reorder'),
     path('admin-wiki/topico/reordenar/', views.admin_major_topic_reorder, name='admin_major_topic_reorder'),
     path('admin-wiki/topico/<slug:major_slug>/sub/reordenar/', views.admin_minor_topic_reorder, name='admin_minor_topic_reorder'),
+
+    # Glossário
+    path('admin-wiki/glossario/', views.admin_glossary, name='admin_glossary'),
+    path('admin-wiki/glossario/salvar/', views.admin_glossary_save, name='admin_glossary_save'),
+    path('admin-wiki/glossario/lista/', views.admin_glossary_list, name='admin_glossary_list'),
+    path('admin-wiki/glossario/<int:term_id>/excluir/', views.admin_glossary_delete, name='admin_glossary_delete'),
 ]

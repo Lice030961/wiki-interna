@@ -72,3 +72,17 @@ class ContentBlock(models.Model):
 
     def __str__(self):
         return f'{self.minor_topic.title} – {self.block_type} #{self.order}'
+
+
+class GlossaryTerm(models.Model):
+    """Dicionário global de termos com tooltip."""
+    term = models.CharField(max_length=100, unique=True)
+    definition = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['term']
+
+    def __str__(self):
+        return self.term

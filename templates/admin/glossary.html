@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Glossário{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-10">
+
+  <div class="mb-6">
+    <a href="{% url 'admin_dashboard' %}" class="text-sm text-brand-red hover:underline">&larr; Voltar ao painel</a>
+  </div>
+
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-extrabold text-gray-900">📖 Glossário</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Termos destacados automaticamente em toda a wiki</p>
+    </div>
+  </div>
+
+  <!-- Formulário de novo termo -->
+  <div class="bg-white border-2 border-brand-yellow rounded-2xl p-6 mb-8">
+    <h2 class="text-base font-bold text-gray-900 mb-4">Adicionar / Atualizar Termo</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Termo <span class="text-brand-red">*</span></label>
+        <input id="new-term" type="text" placeholder="Ex: COP, Caso de Uso..."
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Definição <span class="text-brand-red">*</span></label>
+        <textarea id="new-def" rows="3" placeholder="Explique o que significa este termo..."
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-none"></textarea>
+      </div>
+      <button onclick="saveTerm()"
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
+        Salvar Termo
+      </button>
+    </div>
+  </div>
+
+  <!-- Lista de termos -->
+  <div id="terms-list" class="space-y-3">
+    {% for term in terms %}
+    <div class="border-2 border-gray-100 rounded-2xl p-4 flex items-start gap-4" id="term-row-{{ term.id }}">
+      <div class="flex-1 min-w-0">
+        <p class="font-bold text-brand-red text-sm">{{ term.term }}</p>
+        <p class="text-gray-600 text-sm mt-0.5">{{ term.definition }}</p>
+      </div>
+      <button onclick="deleteTerm({{ term.id }}, '{{ term.term|escapejs }}')"
+              class="shrink-0 border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+        Excluir
+      </button>
+    </div>
+    {% empty %}
+    <div id="empty-state" class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+      <p class="text-3xl mb-2">📭</p>
+      <p class="text-sm">Nenhum termo cadastrado ainda.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<div id="toast"
+     class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('opacity-0'); t.classList.add('opacity-100');
+  setTimeout(() => { t.classList.remove('opacity-100'); t.classList.add('opacity-0'); }, 2500);
+}
+
+async function saveTerm() {
+  const term = document.getElementById('new-term').value.trim();
+  const definition = document.getElementById('new-def').value.trim();
+  if (!term || !definition) { alert('Preencha o termo e a definição.'); return; }
+
+  const res = await fetch('{% url "admin_glossary_save" %}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify({ term, definition }),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    showToast(data.created ? '✓ Termo cadastrado!' : '✓ Termo atualizado!');
+    document.getElementById('new-term').value = '';
+    document.getElementById('new-def').value = '';
+    setTimeout(() => location.reload(), 800);
+  } else {
+    alert(data.error || 'Erro ao salvar.');
+  }
+}
+
+async function deleteTerm(id, name) {
+  if (!confirm(`Excluir o termo "${name}"?`)) return;
+  const res = await fetch(`/admin-wiki/glossario/${id}/excluir/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken },
+  });
+  const data = await res.json();
+  if (data.ok) {
+    document.getElementById(`term-row-${id}`)?.remove();
+    showToast('✓ Termo excluído');
+  }
+}
+
+document.getElementById('new-def').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveTerm(); }
+});
+</script>
+{% endblock %}
