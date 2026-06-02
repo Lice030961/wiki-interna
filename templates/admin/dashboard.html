@@ -16,9 +16,22 @@
   </div>
 
   {% if major_topics %}
-  <div class="space-y-4">
+  <p class="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
+    <span>↕</span> Arraste os tópicos para reorganizar a ordem
+  </p>
+  {% endif %}
+
+  {% if major_topics %}
+  <div id="major-topics-container" class="space-y-4">
     {% for major in major_topics %}
-    <div class="border-2 border-gray-100 rounded-2xl overflow-hidden">
+    <div class="major-topic-item group/major relative border-2 border-gray-100 rounded-2xl overflow-hidden
+                transition-all duration-150 hover:border-brand-red hover:shadow-md
+                cursor-grab active:cursor-grabbing select-none"
+         data-major-id="{{ major.id }}"
+         data-major-slug="{{ major.slug }}">
+
+      <!-- Hover ring major -->
+      <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-red ring-offset-1 opacity-0 group-hover/major:opacity-100 pointer-events-none transition-opacity duration-150"></div>
 
       <!-- Major topic row -->
       <div class="flex items-center gap-3 p-4 bg-gray-50">
@@ -42,9 +55,11 @@
              class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
             Ver
           </a>
-          <form method="post" action="{% url 'admin_major_topic_delete' major.slug %}" onsubmit="return confirm('Excluir este tópico e todos os sub-tópicos?')">
+          <form method="post" action="{% url 'admin_major_topic_delete' major.slug %}"
+                onsubmit="return confirm('Excluir este tópico e todos os sub-tópicos?')">
             {% csrf_token %}
-            <button type="submit" class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+            <button type="submit"
+                    class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
               Excluir
             </button>
           </form>
@@ -53,10 +68,14 @@
 
       <!-- Minor topics -->
       {% if major.minor_topics.all %}
-      <div class="divide-y divide-gray-100">
+      <div class="minor-topics-container divide-y divide-gray-100" data-major-slug="{{ major.slug }}">
         {% for minor in major.minor_topics.all %}
-        <div class="flex items-center gap-3 px-4 py-3 pl-10">
-          <span class="text-base">{{ minor.icon|default:"📄" }}</span>
+        <div class="minor-topic-item group/minor relative flex items-center gap-3 px-4 py-3 pl-10 bg-white
+                    transition-all duration-150 hover:bg-red-50 hover:border-l-4 hover:border-brand-red
+                    cursor-grab active:cursor-grabbing select-none"
+             data-minor-id="{{ minor.id }}">
+
+          <span class="text-base flex-shrink-0">{{ minor.icon|default:"📄" }}</span>
           <div class="flex-1 min-w-0">
             <p class="font-medium text-gray-800 text-sm">{{ minor.title }}</p>
             {% if minor.description %}
@@ -76,9 +95,11 @@
                class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
               Ver
             </a>
-            <form method="post" action="{% url 'admin_minor_topic_delete' major.slug minor.slug %}" onsubmit="return confirm('Excluir este sub-tópico?')">
+            <form method="post" action="{% url 'admin_minor_topic_delete' major.slug minor.slug %}"
+                  onsubmit="return confirm('Excluir este sub-tópico?')">
               {% csrf_token %}
-              <button type="submit" class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+              <button type="submit"
+                      class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
                 Excluir
               </button>
             </form>
@@ -89,6 +110,7 @@
       {% else %}
       <p class="px-10 py-3 text-xs text-gray-400 italic">Nenhum sub-tópico. Clique em "+ Sub-tópico" para criar.</p>
       {% endif %}
+
     </div>
     {% endfor %}
   </div>
@@ -101,4 +123,83 @@
   {% endif %}
 
 </div>
+
+<!-- Toast -->
+<div id="reorder-toast"
+     class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+  ✓ Ordem salva
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+const csrfToken = '{{ csrf_token }}';
+
+function showToast(msg = '✓ Ordem salva') {
+  const toast = document.getElementById('reorder-toast');
+  toast.textContent = msg;
+  toast.classList.remove('opacity-0');
+  toast.classList.add('opacity-100');
+  setTimeout(() => {
+    toast.classList.remove('opacity-100');
+    toast.classList.add('opacity-0');
+  }, 2000);
+}
+
+async function saveOrder(url, orderPayload) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ order: orderPayload }),
+    });
+    showToast(res.ok ? '✓ Ordem salva' : '⚠ Erro ao salvar ordem');
+  } catch {
+    showToast('⚠ Erro ao salvar ordem');
+  }
+}
+
+// Drag nos Tópicos Principais
+const majorContainer = document.getElementById('major-topics-container');
+if (majorContainer) {
+  Sortable.create(majorContainer, {
+    animation: 200,
+    ghostClass: 'opacity-30',
+    chosenClass: 'shadow-xl',
+    dragClass: 'shadow-2xl',
+    // Não arrastar ao clicar nos botões/links de ação
+    filter: 'a, button, form',
+    preventOnFilter: false,
+    onEnd() {
+      const items = majorContainer.querySelectorAll('.major-topic-item');
+      const payload = Array.from(items).map((el, i) => ({
+        id: parseInt(el.dataset.majorId), order: i
+      }));
+      saveOrder('{% url "admin_major_topic_reorder" %}', payload);
+    },
+  });
+}
+
+// Drag nos Sub-tópicos (um Sortable por grupo)
+document.querySelectorAll('.minor-topics-container').forEach(container => {
+  const majorSlug = container.dataset.majorSlug;
+  Sortable.create(container, {
+    animation: 200,
+    ghostClass: 'opacity-30',
+    chosenClass: 'bg-red-50',
+    dragClass: 'shadow-xl',
+    filter: 'a, button, form',
+    preventOnFilter: false,
+    onEnd() {
+      const items = container.querySelectorAll('.minor-topic-item');
+      const payload = Array.from(items).map((el, i) => ({
+        id: parseInt(el.dataset.minorId), order: i
+      }));
+      saveOrder(`/admin-wiki/topico/${majorSlug}/sub/reordenar/`, payload);
+    },
+  });
+});
+</script>
 {% endblock %}

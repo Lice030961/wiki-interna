@@ -25,5 +25,9 @@ urlpatterns = [
     path('admin-wiki/topico/<slug:major_slug>/sub/<slug:minor_slug>/bloco/adicionar/', views.admin_block_add, name='admin_block_add'),
     path('admin-wiki/bloco/<int:block_id>/editar/', views.admin_block_edit, name='admin_block_edit'),
     path('admin-wiki/bloco/<int:block_id>/excluir/', views.admin_block_delete, name='admin_block_delete'),
+
+    # Reordenação via drag-and-drop (AJAX)
     path('admin-wiki/bloco/reordenar/', views.admin_block_reorder, name='admin_block_reorder'),
+    path('admin-wiki/topico/reordenar/', views.admin_major_topic_reorder, name='admin_major_topic_reorder'),
+    path('admin-wiki/topico/<slug:major_slug>/sub/reordenar/', views.admin_minor_topic_reorder, name='admin_minor_topic_reorder'),
 ]

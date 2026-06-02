@@ -243,9 +243,35 @@ def admin_block_delete(request, block_id):
 @login_required
 @user_passes_test(is_admin)
 def admin_block_reorder(request):
+    """Reordena ContentBlocks via drag-and-drop (chamada AJAX)."""
     if request.method == 'POST':
         data = json.loads(request.body)
         for item in data.get('order', []):
             ContentBlock.objects.filter(id=item['id']).update(order=item['order'])
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_major_topic_reorder(request):
+    """Reordena MajorTopics via drag-and-drop (chamada AJAX)."""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        for item in data.get('order', []):
+            MajorTopic.objects.filter(id=item['id']).update(order=item['order'])
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_minor_topic_reorder(request, major_slug):
+    """Reordena MinorTopics de um MajorTopic via drag-and-drop (chamada AJAX)."""
+    major = get_object_or_404(MajorTopic, slug=major_slug)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        for item in data.get('order', []):
+            MinorTopic.objects.filter(id=item['id'], major_topic=major).update(order=item['order'])
         return JsonResponse({'ok': True})
     return JsonResponse({'ok': False}, status=400)
