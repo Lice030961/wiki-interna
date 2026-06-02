@@ -16,30 +16,44 @@ def is_admin(user):
     return user.is_staff or user.is_superuser
 
 
+def apply_markdown(text):
+    """Converte marcadores de formatação em HTML. Chamado sobre texto já HTML-escapado."""
+    pairs = [
+        (re.compile(r'\~\~(.+?)\~\~', re.DOTALL), r'<s>\1</s>'),
+        (re.compile(r'\*\*(.+?)\*\*', re.DOTALL), r'<strong>\1</strong>'),
+        (re.compile(r'\_\_(.+?)\_\_', re.DOTALL), r'<u>\1</u>'),
+        (re.compile(r'\_(.+?)\_', re.DOTALL), r'<em>\1</em>'),
+        (re.compile(r'\`(.+?)\`'), r'<code class="bg-gray-100 px-1 rounded text-xs font-mono">\1</code>'),
+    ]
+    for pattern, repl in pairs:
+        text = pattern.sub(repl, text)
+    return text
+
+
 def apply_glossary(text, terms):
     """
-    Substitui ocorrências dos termos do glossário no texto por spans com tooltip.
-    Faz correspondência case-insensitive e por palavra inteira.
+    Converte marcadores de formatação e substitui termos do glossário por spans com tooltip.
     Retorna HTML seguro.
     """
-    if not terms:
-        return mark_safe(escape(text).replace('\n', '<br>'))
-
-    # Ordena do maior para o menor para evitar substituições parciais (ex: "Caso de Uso" antes de "Uso")
-    sorted_terms = sorted(terms, key=lambda t: len(t.term), reverse=True)
-
     escaped = escape(text)
+    escaped = apply_markdown(escaped)
 
-    for term_obj in sorted_terms:
-        pattern = re.compile(r'(?<!\w)(' + re.escape(escape(term_obj.term)) + r')(?!\w)', re.IGNORECASE)
-        tooltip_def = escape(term_obj.definition).replace('"', '&quot;')
-        replacement = (
-            f'<span class="glossary-term" '
-            f'data-term="{escape(term_obj.term)}" '
-            f'data-def="{tooltip_def}">'
-            f'\\1</span>'
-        )
-        escaped = pattern.sub(replacement, escaped)
+    if terms:
+        sorted_terms = sorted(terms, key=lambda t: len(t.term), reverse=True)
+        for term_obj in sorted_terms:
+            # (?![^<>]*>) impede substituição dentro de atributos de tags já inseridas
+            pattern = re.compile(
+                r'(?<!\w)(?![^<>]*>)(' + re.escape(escape(term_obj.term)) + r')(?!\w)',
+                re.IGNORECASE
+            )
+            tooltip_def = escape(term_obj.definition).replace('"', '&quot;')
+            replacement = (
+                f'<span class="glossary-term" '
+                f'data-term="{escape(term_obj.term)}" '
+                f'data-def="{tooltip_def}">'
+                f'\\1</span>'
+            )
+            escaped = pattern.sub(replacement, escaped)
 
     return mark_safe(escaped.replace('\n', '<br>'))
 
@@ -114,11 +128,16 @@ def minor_topic(request, major_slug, minor_slug):
     blocks = topic.blocks.all()
     terms = GlossaryTerm.objects.all()
 
-    # Processa blocos de texto aplicando o glossário
     processed_blocks = []
     for block in blocks:
-        if block.block_type in ('text', 'checklist'):
+        if block.block_type == 'text':
             block.rendered_content = apply_glossary(block.content, terms)
+        elif block.block_type == 'checklist':
+            block.checklist_lines = [
+                apply_glossary(line, terms)
+                for line in block.content.splitlines()
+                if line.strip()
+            ]
         processed_blocks.append(block)
 
     return render(request, 'minor_topic.html', {
@@ -238,7 +257,7 @@ def admin_content_edit(request, major_slug, minor_slug):
         'topic': topic,
         'blocks': blocks,
         'block_types': ContentBlock.BLOCK_TYPES,
-        'glossary_terms': list(terms.values('term', 'definition')),
+        'glossary_terms': json.dumps(list(terms.values('term', 'definition'))),
     })
 
 
@@ -275,7 +294,7 @@ def admin_block_edit(request, block_id):
     terms = GlossaryTerm.objects.all()
     return render(request, 'admin/block_edit.html', {
         'content_block': block,
-        'glossary_terms': list(terms.values('term', 'definition')),
+        'glossary_terms': json.dumps(list(terms.values('term', 'definition'))),
     })
 
 
@@ -337,18 +356,26 @@ def admin_glossary(request):
 @login_required
 @user_passes_test(is_admin)
 def admin_glossary_save(request):
-    """Cria ou atualiza um termo via AJAX (chamado pelo editor de conteúdo)."""
+    """Cria ou atualiza um termo via AJAX. Aceita 'id' opcional para editar termo específico."""
     if request.method == 'POST':
         data = json.loads(request.body)
         term_text = data.get('term', '').strip()
         definition = data.get('definition', '').strip()
-        if term_text and definition:
+        term_id = data.get('id')
+        if not (term_text and definition):
+            return JsonResponse({'ok': False, 'error': 'Termo e definição são obrigatórios.'}, status=400)
+        if term_id:
+            obj = get_object_or_404(GlossaryTerm, id=term_id)
+            obj.term = term_text
+            obj.definition = definition
+            obj.save()
+            created = False
+        else:
             obj, created = GlossaryTerm.objects.update_or_create(
                 term__iexact=term_text,
                 defaults={'term': term_text, 'definition': definition},
             )
-            return JsonResponse({'ok': True, 'created': created, 'term': obj.term, 'definition': obj.definition})
-        return JsonResponse({'ok': False, 'error': 'Termo e definição são obrigatórios.'}, status=400)
+        return JsonResponse({'ok': True, 'created': created, 'id': obj.id, 'term': obj.term, 'definition': obj.definition})
     return JsonResponse({'ok': False}, status=400)
 
 

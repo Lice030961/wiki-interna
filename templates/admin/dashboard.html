@@ -9,10 +9,16 @@
       <h1 class="text-2xl font-extrabold text-gray-900">Painel Admin</h1>
       <p class="text-gray-500 text-sm mt-0.5">Gerencie tópicos e conteúdo da wiki</p>
     </div>
-    <a href="{% url 'admin_major_topic_create' %}"
-       class="bg-brand-red text-white font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-brand-redhov transition">
-      + Novo Tópico Principal
-    </a>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'admin_glossary' %}"
+         class="border border-brand-yellow text-brand-yellow font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-yellow-50 transition">
+        📖 Glossário
+      </a>
+      <a href="{% url 'admin_major_topic_create' %}"
+         class="bg-brand-red text-white font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-brand-redhov transition">
+        + Novo Tópico Principal
+      </a>
+    </div>
   </div>
 
   {% if major_topics %}

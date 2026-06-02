@@ -57,16 +57,10 @@
 
   <div class="flex items-center justify-between mb-2">
     <h1 class="text-2xl font-extrabold text-gray-900">Editar: {{ topic.title }}</h1>
-    <div class="flex gap-2">
-      <a href="{% url 'admin_glossary' %}"
-         class="border border-brand-yellow text-brand-yellow text-sm px-4 py-2 rounded-lg hover:bg-yellow-50 transition">
-        📖 Glossário
-      </a>
-      <a href="{% url 'minor_topic' major.slug topic.slug %}"
-         class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
-        Ver página
-      </a>
-    </div>
+    <a href="{% url 'minor_topic' major.slug topic.slug %}"
+       class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
+      Ver página
+    </a>
   </div>
 
   {% if blocks %}
@@ -360,7 +354,12 @@ document.addEventListener('DOMContentLoaded', function() {
   var blocksContainer = document.getElementById('blocks-container');
   if (blocksContainer) {
     Sortable.create(blocksContainer, {
-      animation: 200, ghostClass: 'opacity-30', chosenClass: 'shadow-xl', dragClass: 'shadow-2xl',
+      animation: 200,
+      filter: 'a, button, form',
+      preventOnFilter: false,
+      ghostClass: 'opacity-30',
+      chosenClass: 'shadow-xl',
+      dragClass: 'shadow-2xl',
       onEnd: function() {
         var items = blocksContainer.querySelectorAll('.block-item');
         var payload = Array.from(items).map(function(el, i) { return { id: parseInt(el.dataset.blockId), order: i }; });

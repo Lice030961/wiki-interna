@@ -11,32 +11,23 @@
   <div class="flex items-center justify-between mb-8">
     <div>
       <h1 class="text-2xl font-extrabold text-gray-900">📖 Glossário</h1>
-      <p class="text-gray-500 text-sm mt-0.5">Termos destacados automaticamente em toda a wiki</p>
+      <p class="text-gray-500 text-sm mt-0.5">
+        {{ terms|length }} termo{% if terms|length != 1 %}s{% endif %} cadastrado{% if terms|length != 1 %}s{% endif %}
+      </p>
     </div>
   </div>
 
-  <!-- Formulário de novo termo -->
-  <div class="bg-white border-2 border-brand-yellow rounded-2xl p-6 mb-8">
-    <h2 class="text-base font-bold text-gray-900 mb-4">Adicionar / Atualizar Termo</h2>
-    <div class="space-y-3">
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Termo <span class="text-brand-red">*</span></label>
-        <input id="new-term" type="text" placeholder="Ex: COP, Caso de Uso..."
-               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Definição <span class="text-brand-red">*</span></label>
-        <textarea id="new-def" rows="3" placeholder="Explique o que significa este termo..."
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-none"></textarea>
-      </div>
-      <button onclick="saveTerm()"
-              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
-        Salvar Termo
-      </button>
-    </div>
+  <!-- Busca -->
+  {% if terms %}
+  <div class="relative mb-5">
+    <input id="search-filter" type="text" placeholder="Filtrar termos..."
+           oninput="filterTerms(this.value)"
+           class="w-full border border-gray-300 rounded-lg pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔍</span>
   </div>
+  {% endif %}
 
-  <!-- Lista de termos -->
+  <!-- Lista -->
   <div id="terms-list" class="space-y-3">
     {% for term in terms %}
     <div class="border-2 border-gray-100 rounded-2xl p-4 flex items-start gap-4" id="term-row-{{ term.id }}">
@@ -44,21 +35,65 @@
         <p class="font-bold text-brand-red text-sm">{{ term.term }}</p>
         <p class="text-gray-600 text-sm mt-0.5">{{ term.definition }}</p>
       </div>
-      <button onclick="deleteTerm({{ term.id }}, '{{ term.term|escapejs }}')"
-              class="shrink-0 border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
-        Excluir
-      </button>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="openEdit({{ term.id }}, '{{ term.term|escapejs }}', '{{ term.definition|escapejs }}')"
+                class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+          Editar
+        </button>
+        <button onclick="deleteTerm({{ term.id }}, '{{ term.term|escapejs }}')"
+                class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+          Excluir
+        </button>
+      </div>
     </div>
     {% empty %}
-    <div id="empty-state" class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+    <div class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
       <p class="text-3xl mb-2">📭</p>
       <p class="text-sm">Nenhum termo cadastrado ainda.</p>
     </div>
     {% endfor %}
+
+    <div id="no-results" style="display:none"
+         class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+      <p class="text-3xl mb-2">🔍</p>
+      <p class="text-sm">Nenhum termo encontrado.</p>
+    </div>
   </div>
 
 </div>
 
+<!-- Modal de edição -->
+<div id="edit-modal"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 opacity-0 pointer-events-none"
+     style="transition: opacity 0.15s;">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+    <h3 class="text-base font-extrabold text-gray-900 mb-4">Editar Termo</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Termo</label>
+        <input id="modal-term" type="text"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Definição</label>
+        <textarea id="modal-def" rows="4"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-none"></textarea>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="saveEdit()"
+              class="flex-1 bg-brand-red text-white font-bold px-4 py-2 rounded-lg hover:bg-brand-redhov transition text-sm">
+        Salvar
+      </button>
+      <button onclick="closeModal()"
+              class="flex-1 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition text-sm">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
 <div id="toast"
      class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
 </div>
@@ -66,51 +101,86 @@
 
 {% block extra_js %}
 <script>
-const csrfToken = '{{ csrf_token }}';
+var csrfToken = '{{ csrf_token }}';
+var editingId = null;
 
 function showToast(msg) {
-  const t = document.getElementById('toast');
+  var t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.remove('opacity-0'); t.classList.add('opacity-100');
-  setTimeout(() => { t.classList.remove('opacity-100'); t.classList.add('opacity-0'); }, 2500);
+  setTimeout(function() { t.classList.remove('opacity-100'); t.classList.add('opacity-0'); }, 2500);
 }
 
-async function saveTerm() {
-  const term = document.getElementById('new-term').value.trim();
-  const definition = document.getElementById('new-def').value.trim();
+function filterTerms(query) {
+  var q = query.toLowerCase().trim();
+  var rows = document.querySelectorAll('[id^="term-row-"]');
+  var visible = 0;
+  rows.forEach(function(row) {
+    var show = !q || row.textContent.toLowerCase().includes(q);
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('no-results').style.display = (q && visible === 0) ? '' : 'none';
+}
+
+function openEdit(id, term, definition) {
+  editingId = id;
+  document.getElementById('modal-term').value = term;
+  document.getElementById('modal-def').value = definition;
+  var modal = document.getElementById('edit-modal');
+  modal.classList.remove('opacity-0', 'pointer-events-none');
+  setTimeout(function() { document.getElementById('modal-term').focus(); }, 50);
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.add('opacity-0', 'pointer-events-none');
+  editingId = null;
+}
+
+function saveEdit() {
+  var term = document.getElementById('modal-term').value.trim();
+  var definition = document.getElementById('modal-def').value.trim();
   if (!term || !definition) { alert('Preencha o termo e a definição.'); return; }
 
-  const res = await fetch('{% url "admin_glossary_save" %}', {
+  fetch('{% url "admin_glossary_save" %}', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-    body: JSON.stringify({ term, definition }),
+    body: JSON.stringify({ id: editingId, term: term, definition: definition }),
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      showToast('✓ Termo atualizado!');
+      closeModal();
+      setTimeout(function() { location.reload(); }, 800);
+    } else {
+      alert(data.error || 'Erro ao salvar.');
+    }
   });
-  const data = await res.json();
-  if (data.ok) {
-    showToast(data.created ? '✓ Termo cadastrado!' : '✓ Termo atualizado!');
-    document.getElementById('new-term').value = '';
-    document.getElementById('new-def').value = '';
-    setTimeout(() => location.reload(), 800);
-  } else {
-    alert(data.error || 'Erro ao salvar.');
-  }
 }
 
-async function deleteTerm(id, name) {
-  if (!confirm(`Excluir o termo "${name}"?`)) return;
-  const res = await fetch(`/admin-wiki/glossario/${id}/excluir/`, {
+function deleteTerm(id, name) {
+  if (!confirm('Excluir o termo "' + name + '"?')) return;
+  fetch('/admin-wiki/glossario/' + id + '/excluir/', {
     method: 'POST',
     headers: { 'X-CSRFToken': csrfToken },
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      var row = document.getElementById('term-row-' + id);
+      if (row) row.remove();
+      showToast('✓ Termo excluído');
+    }
   });
-  const data = await res.json();
-  if (data.ok) {
-    document.getElementById(`term-row-${id}`)?.remove();
-    showToast('✓ Termo excluído');
-  }
 }
 
-document.getElementById('new-def').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveTerm(); }
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+document.getElementById('modal-def').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
 });
 </script>
 {% endblock %}

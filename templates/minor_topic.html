@@ -102,13 +102,11 @@
     <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
       {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
       <div class="space-y-2">
-        {% for line in block.content.splitlines %}
-        {% if line.strip %}
+        {% for line in block.checklist_lines %}
         <label class="flex items-start gap-3 cursor-pointer group">
           <input type="checkbox" class="mt-0.5 w-4 h-4 accent-brand-red rounded" />
           <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ line }}</span>
         </label>
-        {% endif %}
         {% endfor %}
       </div>
     </div>
