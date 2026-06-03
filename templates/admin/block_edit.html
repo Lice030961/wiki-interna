@@ -84,6 +84,11 @@
                 title="Marcar termo do glossário">
           📖 Termo
         </button>
+        <button type="button" onclick="insertAttention('edit-textarea')"
+                class="fmt-btn bg-red-50 text-brand-red border border-red-200 font-semibold text-xs px-2"
+                title="Bloco de atenção">
+          ⚠️ Atenção
+        </button>
       </div>
 
       <!-- Textarea com overlay de highlight -->
@@ -196,15 +201,32 @@ function escapeHtml(text) {
 }
 
 function buildHighlight(text) {
-  if (!glossaryTerms.length) return escapeHtml(text);
   var result = escapeHtml(text);
-  var sorted = glossaryTerms.slice().sort(function(a, b) { return b.term.length - a.term.length; });
-  sorted.forEach(function(t) {
-    var esc = t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var re = new RegExp('(?<![\\w\\u00C0-\\u024F])(' + esc + ')(?![\\w\\u00C0-\\u024F])', 'gi');
-    result = result.replace(re, '<mark>$1</mark>');
-  });
+  // Destaca tags [ATENÇÃO] no editor
+  result = result.replace(/\[ATENÇÃO\]/gi, '<mark style="background:transparent;color:#AC2407;font-weight:700">[ATENÇÃO]</mark>');
+  result = result.replace(/\[\/ATENÇÃO\]/gi, '<mark style="background:transparent;color:#AC2407;font-weight:700">[/ATENÇÃO]</mark>');
+  if (glossaryTerms.length) {
+    var sorted = glossaryTerms.slice().sort(function(a, b) { return b.term.length - a.term.length; });
+    sorted.forEach(function(t) {
+      var esc = t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var re = new RegExp('(?<![\\w\\u00C0-\\u024F])(' + esc + ')(?![\\w\\u00C0-\\u024F])', 'gi');
+      result = result.replace(re, '<mark>$1</mark>');
+    });
+  }
   return result;
+}
+
+function insertAttention(taId) {
+  var ta = document.getElementById(taId);
+  if (!ta) return;
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  var sel = ta.value.substring(s, e).trim();
+  var tag = '[ATENÇÃO]\n' + (sel ? sel + '\n' : '') + '[/ATENÇÃO]';
+  ta.value = ta.value.substring(0, s) + tag + ta.value.substring(e);
+  ta.focus();
+  var pos = sel ? s + tag.length : s + '[ATENÇÃO]\n'.length;
+  ta.setSelectionRange(pos, pos);
+  syncHighlight(taId, taId.replace('textarea', 'highlight'));
 }
 
 function syncHighlight(taId, hlId) {

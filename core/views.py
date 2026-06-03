@@ -18,6 +18,21 @@ def is_admin(user):
 
 def apply_markdown(text):
     """Converte marcadores de formatação em HTML. Chamado sobre texto já HTML-escapado."""
+    def attention_replace(m):
+        inner = m.group(1).strip('\n')
+        return (
+            '\n<div class="attention-box">'
+            '<span class="attention-label">⚠️ ATENÇÃO</span>'
+            + inner +
+            '</div>\n'
+        )
+    text = re.sub(
+        r'\n*\[ATENÇÃO\]\n?(.*?)\n?\[/ATENÇÃO\]\n*',
+        attention_replace,
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
     pairs = [
         (re.compile(r'\~\~(.+?)\~\~', re.DOTALL), r'<s>\1</s>'),
         (re.compile(r'\*\*(.+?)\*\*', re.DOTALL), r'<strong>\1</strong>'),
