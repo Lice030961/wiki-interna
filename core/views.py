@@ -135,6 +135,32 @@ def search(request):
                 seen.add(url)
                 results.append({'title': mt.title, 'major': 'Tópico Principal', 'url': url})
 
+    # Busca regionais (cidades e territórios)
+    if q:
+        regionais_topic = MinorTopic.objects.filter(
+            is_territory_map=True
+        ).select_related('major_topic').first()
+        if regionais_topic:
+            regionais_url = f'/topico/{regionais_topic.major_topic.slug}/{regionais_topic.slug}/'
+            cidades = Cidade.objects.filter(
+                nome__icontains=q
+            ).select_related('territorio__regiao')[:10]
+            for cidade in cidades:
+                results.append({
+                    'title': cidade.nome,
+                    'major': f'{cidade.territorio.regiao.nome} / {cidade.territorio.nome}',
+                    'url': regionais_url,
+                })
+            territorios = Territorio.objects.filter(
+                nome__icontains=q
+            ).select_related('regiao')[:5]
+            for territorio in territorios:
+                results.append({
+                    'title': territorio.nome,
+                    'major': territorio.regiao.nome,
+                    'url': regionais_url,
+                })
+
     return JsonResponse({'results': results})
 
 
