@@ -3,6 +3,39 @@
 
 {% block extra_head %}
 <style>
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 1000;
+    cursor: zoom-out;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  #lightbox.active { display: flex; }
+  #lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 8px 64px rgba(0,0,0,0.6);
+  }
+  #lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    color: white;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  #lightbox-close:hover { opacity: 1; }
+</style>
+<style>
   .glossary-term {
     color: #AC2407;
     font-weight: 600;
@@ -132,7 +165,8 @@
     <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
       {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
       {% if block.file %}
-      <img src="{{ block.file.url }}" alt="{{ block.title }}" class="rounded-xl max-w-full h-auto" />
+      <img src="{{ block.file.url }}" alt="{{ block.title }}"
+           class="rounded-xl max-w-full h-auto cursor-zoom-in lb-trigger" />
       {% endif %}
       {% if block.content %}<p class="text-xs text-gray-400 mt-2">{{ block.content }}</p>{% endif %}
     </div>
@@ -162,4 +196,32 @@
   </div>
 
 </div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <span id="lightbox-close" onclick="closeLightbox()">&times;</span>
+  <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()" />
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.lb-trigger').forEach(function(img) {
+  img.addEventListener('click', function() {
+    document.getElementById('lightbox-img').src = this.src;
+    document.getElementById('lightbox-img').alt = this.alt;
+    document.getElementById('lightbox').classList.add('active');
+  });
+});
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+
+document.getElementById('lightbox').addEventListener('click', closeLightbox);
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
 {% endblock %}
