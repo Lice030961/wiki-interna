@@ -16,6 +16,12 @@
       <input type="text" name="nome" required autofocus value="{{ obj.nome|default:'' }}"
              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
     </div>
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Ícone (emoji)</label>
+      <input type="text" name="icon" value="{{ obj.icon|default:'🌎' }}" maxlength="10"
+             placeholder="Ex: 🌎"
+             class="w-32 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+    </div>
     <div class="flex gap-3 pt-2">
       <button type="submit"
               class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">

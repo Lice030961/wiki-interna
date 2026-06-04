@@ -158,6 +158,7 @@ def minor_topic(request, major_slug, minor_slug):
             {
                 'id': r.id,
                 'nome': r.nome,
+                'icon': r.icon or '🌎',
                 'territorios': [
                     {
                         'id': t.id,
@@ -463,8 +464,9 @@ def admin_regionais(request):
 def admin_regiao_create(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
+        icon = request.POST.get('icon', '').strip() or '🌎'
         if nome:
-            Regiao.objects.create(nome=nome)
+            Regiao.objects.create(nome=nome, icon=icon)
         return redirect('admin_regionais')
     return render(request, 'admin/regiao_form.html', {'action': 'Criar', 'obj': None})
 
@@ -475,8 +477,10 @@ def admin_regiao_edit(request, regiao_id):
     regiao = get_object_or_404(Regiao, id=regiao_id)
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
+        icon = request.POST.get('icon', '').strip() or '🌎'
         if nome:
             regiao.nome = nome
+            regiao.icon = icon
             regiao.save()
         return redirect('admin_regionais')
     return render(request, 'admin/regiao_form.html', {'action': 'Editar', 'obj': regiao})

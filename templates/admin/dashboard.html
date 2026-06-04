@@ -89,17 +89,10 @@
             {% endif %}
           </div>
           <div class="flex gap-2 shrink-0">
-            {% if minor.is_territory_map %}
-            <a href="{% url 'admin_regionais' %}"
-               class="bg-brand-red text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-redhov transition">
-              🗺️ Regionais
-            </a>
-            {% else %}
             <a href="{% url 'admin_content_edit' major.slug minor.slug %}"
                class="bg-brand-red text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-redhov transition">
               Conteúdo
             </a>
-            {% endif %}
             <a href="{% url 'admin_minor_topic_edit' major.slug minor.slug %}"
                class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
               Editar

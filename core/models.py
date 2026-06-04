@@ -91,6 +91,7 @@ class GlossaryTerm(models.Model):
 
 class Regiao(models.Model):
     nome = models.CharField(max_length=200)
+    icon = models.CharField(max_length=10, blank=True, default='🌎')
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
