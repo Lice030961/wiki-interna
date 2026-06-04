@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Região{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-10">
+  <div class="mb-6">
+    <a href="{% url 'admin_regionais' %}" class="text-sm text-brand-red hover:underline">&larr; Voltar</a>
+  </div>
+
+  <h1 class="text-2xl font-extrabold text-gray-900 mb-8">{{ action }} Região</h1>
+
+  <form method="post" class="space-y-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Nome da Região <span class="text-brand-red">*</span></label>
+      <input type="text" name="nome" required autofocus value="{{ obj.nome|default:'' }}"
+             class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+    </div>
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
+        Salvar
+      </button>
+      <a href="{% url 'admin_regionais' %}"
+         class="border border-gray-300 text-gray-600 px-6 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
+        Cancelar
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

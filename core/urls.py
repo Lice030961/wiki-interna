@@ -31,6 +31,18 @@ urlpatterns = [
     path('admin-wiki/topico/reordenar/', views.admin_major_topic_reorder, name='admin_major_topic_reorder'),
     path('admin-wiki/topico/<slug:major_slug>/sub/reordenar/', views.admin_minor_topic_reorder, name='admin_minor_topic_reorder'),
 
+    # Regionais
+    path('admin-wiki/regionais/', views.admin_regionais, name='admin_regionais'),
+    path('admin-wiki/regionais/regiao/criar/', views.admin_regiao_create, name='admin_regiao_create'),
+    path('admin-wiki/regionais/regiao/<int:regiao_id>/editar/', views.admin_regiao_edit, name='admin_regiao_edit'),
+    path('admin-wiki/regionais/regiao/<int:regiao_id>/excluir/', views.admin_regiao_delete, name='admin_regiao_delete'),
+    path('admin-wiki/regionais/territorio/criar/', views.admin_territorio_create, name='admin_territorio_create'),
+    path('admin-wiki/regionais/territorio/<int:territorio_id>/editar/', views.admin_territorio_edit, name='admin_territorio_edit'),
+    path('admin-wiki/regionais/territorio/<int:territorio_id>/excluir/', views.admin_territorio_delete, name='admin_territorio_delete'),
+    path('admin-wiki/regionais/cidade/criar/', views.admin_cidade_create, name='admin_cidade_create'),
+    path('admin-wiki/regionais/cidade/<int:cidade_id>/editar/', views.admin_cidade_edit, name='admin_cidade_edit'),
+    path('admin-wiki/regionais/cidade/<int:cidade_id>/excluir/', views.admin_cidade_delete, name='admin_cidade_delete'),
+
     # Glossário
     path('admin-wiki/glossario/', views.admin_glossary, name='admin_glossary'),
     path('admin-wiki/glossario/salvar/', views.admin_glossary_save, name='admin_glossary_save'),

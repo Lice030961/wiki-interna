@@ -9,7 +9,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.db.models import Q
 
-from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm
+from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade
 
 
 def is_admin(user):
@@ -106,24 +106,35 @@ def search(request):
     q = request.GET.get('q', '').strip()
     results = []
     if q:
+        seen = set()
+
         minor_topics = MinorTopic.objects.filter(
             Q(title__icontains=q) | Q(description__icontains=q)
         ).select_related('major_topic')[:20]
         for mt in minor_topics:
-            results.append({
-                'title': mt.title,
-                'major': mt.major_topic.title,
-                'url': f'/topico/{mt.major_topic.slug}/{mt.slug}/',
-            })
+            url = f'/topico/{mt.major_topic.slug}/{mt.slug}/'
+            if url not in seen:
+                seen.add(url)
+                results.append({'title': mt.title, 'major': mt.major_topic.title, 'url': url})
+
+        block_topics = MinorTopic.objects.filter(
+            Q(blocks__content__icontains=q) | Q(blocks__title__icontains=q)
+        ).select_related('major_topic').distinct()[:20]
+        for mt in block_topics:
+            url = f'/topico/{mt.major_topic.slug}/{mt.slug}/'
+            if url not in seen:
+                seen.add(url)
+                results.append({'title': mt.title, 'major': mt.major_topic.title, 'url': url})
+
         major_topics = MajorTopic.objects.filter(
             Q(title__icontains=q) | Q(description__icontains=q)
         )[:10]
         for mt in major_topics:
-            results.append({
-                'title': mt.title,
-                'major': 'Tópico Principal',
-                'url': f'/topico/{mt.slug}/',
-            })
+            url = f'/topico/{mt.slug}/'
+            if url not in seen:
+                seen.add(url)
+                results.append({'title': mt.title, 'major': 'Tópico Principal', 'url': url})
+
     return JsonResponse({'results': results})
 
 
@@ -140,6 +151,30 @@ def major_topic(request, major_slug):
 def minor_topic(request, major_slug, minor_slug):
     major = get_object_or_404(MajorTopic, slug=major_slug)
     topic = get_object_or_404(MinorTopic, major_topic=major, slug=minor_slug)
+
+    if topic.is_territory_map:
+        regioes = Regiao.objects.prefetch_related('territorios__cidades').all()
+        regioes_json = json.dumps([
+            {
+                'id': r.id,
+                'nome': r.nome,
+                'territorios': [
+                    {
+                        'id': t.id,
+                        'nome': t.nome,
+                        'cidades': [c.nome for c in t.cidades.all()],
+                    }
+                    for t in r.territorios.all()
+                ],
+            }
+            for r in regioes
+        ], ensure_ascii=False)
+        return render(request, 'regionais.html', {
+            'major': major,
+            'topic': topic,
+            'regioes_json': regioes_json,
+        })
+
     blocks = topic.blocks.all()
     terms = GlossaryTerm.objects.all()
 
@@ -242,6 +277,7 @@ def admin_minor_topic_edit(request, major_slug, minor_slug):
         topic.title = request.POST.get('title', topic.title).strip()
         topic.description = request.POST.get('description', '').strip()
         topic.icon = request.POST.get('icon', '').strip()
+        topic.is_territory_map = 'is_territory_map' in request.POST
         topic.save()
         return redirect('admin_dashboard')
     return render(request, 'admin/minor_topic_form.html', {'action': 'Editar', 'major': major, 'topic': topic})
@@ -411,3 +447,121 @@ def admin_glossary_list(request):
     """Retorna todos os termos como JSON (para o editor carregar)."""
     terms = list(GlossaryTerm.objects.values('id', 'term', 'definition'))
     return JsonResponse({'terms': terms})
+
+
+# ── Admin: Regionais ──────────────────────────────────────────────────────────
+
+@login_required
+@user_passes_test(is_admin)
+def admin_regionais(request):
+    regioes = Regiao.objects.prefetch_related('territorios__cidades').all()
+    return render(request, 'admin/regionais.html', {'regioes': regioes})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_regiao_create(request):
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if nome:
+            Regiao.objects.create(nome=nome)
+        return redirect('admin_regionais')
+    return render(request, 'admin/regiao_form.html', {'action': 'Criar', 'obj': None})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_regiao_edit(request, regiao_id):
+    regiao = get_object_or_404(Regiao, id=regiao_id)
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if nome:
+            regiao.nome = nome
+            regiao.save()
+        return redirect('admin_regionais')
+    return render(request, 'admin/regiao_form.html', {'action': 'Editar', 'obj': regiao})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_regiao_delete(request, regiao_id):
+    regiao = get_object_or_404(Regiao, id=regiao_id)
+    if request.method == 'POST':
+        regiao.delete()
+        return redirect('admin_regionais')
+    return render(request, 'admin/confirm_delete.html', {'object': regiao, 'type': 'região'})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_territorio_create(request):
+    regiao_id = request.POST.get('regiao_id') or request.GET.get('regiao_id')
+    regiao = get_object_or_404(Regiao, id=regiao_id) if regiao_id else None
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if nome and regiao:
+            Territorio.objects.create(nome=nome, regiao=regiao)
+        return redirect('admin_regionais')
+    return render(request, 'admin/territorio_form.html', {'action': 'Criar', 'obj': None, 'regiao': regiao})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_territorio_edit(request, territorio_id):
+    territorio = get_object_or_404(Territorio, id=territorio_id)
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if nome:
+            territorio.nome = nome
+            territorio.save()
+        return redirect('admin_regionais')
+    return render(request, 'admin/territorio_form.html', {'action': 'Editar', 'obj': territorio, 'regiao': territorio.regiao})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_territorio_delete(request, territorio_id):
+    territorio = get_object_or_404(Territorio, id=territorio_id)
+    if request.method == 'POST':
+        territorio.delete()
+        return redirect('admin_regionais')
+    return render(request, 'admin/confirm_delete.html', {'object': territorio, 'type': 'território'})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_cidade_create(request):
+    territorio_id = request.POST.get('territorio_id') or request.GET.get('territorio_id')
+    territorio = get_object_or_404(Territorio, id=territorio_id) if territorio_id else None
+    if request.method == 'POST':
+        nomes = request.POST.get('nomes', '')
+        if territorio and nomes.strip():
+            for nome in nomes.splitlines():
+                nome = nome.strip()
+                if nome:
+                    Cidade.objects.get_or_create(nome=nome, territorio=territorio)
+        return redirect('admin_regionais')
+    return render(request, 'admin/cidade_form.html', {'action': 'Criar', 'obj': None, 'territorio': territorio})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_cidade_edit(request, cidade_id):
+    cidade = get_object_or_404(Cidade, id=cidade_id)
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if nome:
+            cidade.nome = nome
+            cidade.save()
+        return redirect('admin_regionais')
+    return render(request, 'admin/cidade_form.html', {'action': 'Editar', 'obj': cidade, 'territorio': cidade.territorio})
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_cidade_delete(request, cidade_id):
+    cidade = get_object_or_404(Cidade, id=cidade_id)
+    if request.method == 'POST':
+        cidade.delete()
+        return redirect('admin_regionais')
+    return render(request, 'admin/confirm_delete.html', {'object': cidade, 'type': 'cidade'})

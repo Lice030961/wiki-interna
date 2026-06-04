@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block title %}{{ topic.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-10">
+
+  <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6 flex-wrap">
+    <a href="{% url 'home' %}" class="hover:text-brand-red transition">Início</a>
+    <span>/</span>
+    <a href="{% url 'major_topic' major.slug %}" class="hover:text-brand-red transition">{{ major.title }}</a>
+    <span>/</span>
+    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+  </nav>
+
+  <div class="flex items-center gap-4 mb-8">
+    <div class="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center text-white text-2xl shrink-0">
+      {{ topic.icon|default:"🗺️" }}
+    </div>
+    <div class="flex-1">
+      <h1 class="text-2xl font-extrabold text-gray-900">{{ topic.title }}</h1>
+      {% if topic.description %}
+      <p class="text-gray-500 text-sm mt-0.5">{{ topic.description }}</p>
+      {% endif %}
+    </div>
+    {% if user.is_staff or user.is_superuser %}
+    <a href="{% url 'admin_regionais' %}"
+       class="shrink-0 bg-brand-red text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-brand-redhov transition">
+      Gerenciar
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Busca -->
+  <div class="relative mb-8">
+    <input id="reg-search" type="text"
+           placeholder="Pesquisar cidade ou território..."
+           autocomplete="off"
+           class="w-full border-2 border-gray-200 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-brand-red transition" />
+    <div id="reg-results"
+         class="hidden absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-30"
+         style="max-height:300px;overflow-y:auto"></div>
+  </div>
+
+  <!-- Navegação drill-down -->
+  <div id="reg-nav"></div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script id="regionais-data" type="application/json">{{ regioes_json|safe }}</script>
+<script>
+var DATA = JSON.parse(document.getElementById('regionais-data').textContent);
+var selRegiao = null;
+var selTerritorio = null;
+
+function render() {
+  var nav = document.getElementById('reg-nav');
+
+  if (!selRegiao) {
+    // Nível 0: regiões
+    if (!DATA.length) {
+      nav.innerHTML = '<div class="text-center py-16 text-gray-400"><p class="text-4xl mb-3">🗺️</p><p class="text-sm">Nenhuma região cadastrada ainda.</p></div>';
+      return;
+    }
+    nav.innerHTML =
+      '<p class="text-xs font-bold uppercase tracking-widest text-brand-red mb-4">Selecione uma região</p>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">' +
+      DATA.map(function(r) {
+        return '<button onclick="pickRegiao(' + r.id + ')" ' +
+          'class="group flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl ' +
+          'hover:border-brand-red hover:shadow-md transition bg-white text-center">' +
+          '<span class="text-4xl">🌎</span>' +
+          '<span class="font-bold text-gray-900 group-hover:text-brand-red transition">' + r.nome + '</span>' +
+          '<span class="text-xs text-gray-400">' + r.territorios.length + ' território' + (r.territorios.length !== 1 ? 's' : '') + '</span>' +
+          '</button>';
+      }).join('') +
+      '</div>';
+    return;
+  }
+
+  if (!selTerritorio) {
+    // Nível 1: territórios
+    nav.innerHTML =
+      '<div class="flex items-center gap-3 mb-5">' +
+        '<button onclick="pickRegiao(null)" class="text-brand-red hover:underline text-sm font-semibold">← Regiões</button>' +
+        '<span class="text-gray-300">/</span>' +
+        '<span class="text-gray-800 font-bold">' + selRegiao.nome + '</span>' +
+      '</div>' +
+      (selRegiao.territorios.length ? (
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+        selRegiao.territorios.map(function(t) {
+          return '<button onclick="pickTerritorio(' + t.id + ')" ' +
+            'class="group flex items-center gap-4 p-4 border-2 border-gray-100 rounded-xl ' +
+            'hover:border-brand-yellow hover:shadow-sm transition bg-white text-left">' +
+            '<span class="text-2xl shrink-0">📍</span>' +
+            '<div>' +
+              '<p class="font-semibold text-gray-900 group-hover:text-brand-red transition">' + t.nome + '</p>' +
+              '<p class="text-xs text-gray-400">' + t.cidades.length + ' cidade' + (t.cidades.length !== 1 ? 's' : '') + '</p>' +
+            '</div>' +
+            '</button>';
+        }).join('') +
+        '</div>'
+      ) : '<p class="text-sm text-gray-400 py-10 text-center">Nenhum território nesta região.</p>');
+    return;
+  }
+
+  // Nível 2: cidades
+  nav.innerHTML =
+    '<div class="flex items-center gap-3 mb-5 flex-wrap">' +
+      '<button onclick="pickRegiao(null)" class="text-brand-red hover:underline text-sm font-semibold">← Regiões</button>' +
+      '<span class="text-gray-300">/</span>' +
+      '<button onclick="pickTerritorio(null)" class="text-brand-red hover:underline text-sm font-semibold">' + selRegiao.nome + '</button>' +
+      '<span class="text-gray-300">/</span>' +
+      '<span class="text-gray-800 font-bold text-sm">' + selTerritorio.nome + '</span>' +
+    '</div>' +
+    (selTerritorio.cidades.length ? (
+      '<div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">' +
+        '<div class="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4">' +
+        selTerritorio.cidades.map(function(c) {
+          return '<div class="flex items-center gap-2 py-1">' +
+            '<span class="text-brand-red text-xs">•</span>' +
+            '<span class="text-sm text-gray-700">' + c + '</span>' +
+            '</div>';
+        }).join('') +
+        '</div>' +
+      '</div>'
+    ) : '<p class="text-sm text-gray-400 py-10 text-center">Nenhuma cidade neste território.</p>');
+}
+
+function pickRegiao(id) {
+  selRegiao = id ? DATA.find(function(r) { return r.id === id; }) : null;
+  selTerritorio = null;
+  render();
+}
+
+function pickTerritorio(id) {
+  if (!id) { selTerritorio = null; render(); return; }
+  selTerritorio = selRegiao.territorios.find(function(t) { return t.id === id; });
+  render();
+}
+
+// Busca
+var searchInput = document.getElementById('reg-search');
+var searchResults = document.getElementById('reg-results');
+
+searchInput.addEventListener('input', function() {
+  var q = this.value.trim().toLowerCase();
+  if (!q) { searchResults.classList.add('hidden'); return; }
+
+  var matches = [];
+  DATA.forEach(function(r) {
+    r.territorios.forEach(function(t) {
+      if (t.nome.toLowerCase().includes(q)) {
+        matches.push({ label: r.nome + ' / ' + t.nome, rId: r.id, tId: t.id });
+      }
+      t.cidades.forEach(function(c) {
+        if (c.toLowerCase().includes(q)) {
+          matches.push({ label: r.nome + ' / ' + t.nome + ' / ' + c, rId: r.id, tId: t.id });
+        }
+      });
+    });
+  });
+
+  if (!matches.length) {
+    searchResults.innerHTML = '<p class="px-4 py-3 text-sm text-gray-400">Nenhum resultado.</p>';
+  } else {
+    searchResults.innerHTML = matches.slice(0, 15).map(function(m) {
+      return '<button onclick="goTo(' + m.rId + ',' + m.tId + ')" ' +
+        'class="w-full text-left px-4 py-3 hover:bg-gray-50 border-b last:border-0 transition">' +
+        '<span class="text-sm text-gray-800">' + m.label + '</span>' +
+        '</button>';
+    }).join('');
+  }
+  searchResults.classList.remove('hidden');
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#reg-search') && !e.target.closest('#reg-results')) {
+    searchResults.classList.add('hidden');
+  }
+});
+
+function goTo(rId, tId) {
+  selRegiao = DATA.find(function(r) { return r.id === rId; });
+  selTerritorio = selRegiao.territorios.find(function(t) { return t.id === tId; });
+  searchResults.classList.add('hidden');
+  searchInput.value = '';
+  render();
+}
+
+render();
+</script>
+{% endblock %}

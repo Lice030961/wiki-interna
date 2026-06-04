@@ -3,34 +3,6 @@
 
 {% block extra_head %}
 <style>
-  .editor-wrap { position: relative; }
-  .editor-highlight {
-    position: absolute;
-    inset: 0;
-    padding: 10px 16px;
-    font-size: 0.875rem;
-    line-height: 1.5rem;
-    font-family: ui-monospace, monospace;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow: hidden;
-    pointer-events: none;
-    color: transparent;
-    border: 1px solid transparent;
-    border-radius: 0 0 0.5rem 0.5rem;
-    box-sizing: border-box;
-  }
-  .editor-highlight mark {
-    background: transparent;
-    color: #AC2407;
-    font-weight: 700;
-  }
-  .editor-textarea {
-    position: relative;
-    background: transparent !important;
-    caret-color: #111;
-    z-index: 1;
-  }
   .fmt-btn {
     padding: 2px 8px;
     font-size: 0.875rem;
@@ -91,14 +63,8 @@
         </button>
       </div>
 
-      <!-- Textarea com overlay de highlight -->
-      <div class="editor-wrap">
-        <div id="edit-highlight" class="editor-highlight border border-gray-300"></div>
-        <textarea id="edit-textarea" name="content" rows="6"
-                  oninput="syncHighlight('edit-textarea', 'edit-highlight')"
-                  onscroll="syncScroll('edit-textarea', 'edit-highlight')"
-                  class="editor-textarea w-full border border-gray-300 rounded-b-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y font-mono">{{ content_block.content }}</textarea>
-      </div>
+      <textarea id="edit-textarea" name="content" rows="6"
+                class="w-full border border-gray-300 rounded-b-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y font-mono">{{ content_block.content }}</textarea>
     </div>
 
     {% if content_block.block_type == 'image' or content_block.block_type == 'video' %}
@@ -193,27 +159,6 @@ function fmt(taId, type) {
   ta.value = ta.value.substring(0, s) + m + sel + m + ta.value.substring(e);
   ta.focus();
   ta.setSelectionRange(s + m.length, s + m.length + sel.length);
-  syncHighlight(taId, taId.replace('textarea', 'highlight'));
-}
-
-function escapeHtml(text) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function buildHighlight(text) {
-  var result = escapeHtml(text);
-  // Destaca tags [ATENÇÃO] no editor
-  result = result.replace(/\[ATENÇÃO\]/gi, '<mark style="background:transparent;color:#AC2407;font-weight:700">[ATENÇÃO]</mark>');
-  result = result.replace(/\[\/ATENÇÃO\]/gi, '<mark style="background:transparent;color:#AC2407;font-weight:700">[/ATENÇÃO]</mark>');
-  if (glossaryTerms.length) {
-    var sorted = glossaryTerms.slice().sort(function(a, b) { return b.term.length - a.term.length; });
-    sorted.forEach(function(t) {
-      var esc = t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      var re = new RegExp('(?<![\\w\\u00C0-\\u024F])(' + esc + ')(?![\\w\\u00C0-\\u024F])', 'gi');
-      result = result.replace(re, '<mark>$1</mark>');
-    });
-  }
-  return result;
 }
 
 function insertAttention(taId) {
@@ -226,21 +171,6 @@ function insertAttention(taId) {
   ta.focus();
   var pos = sel ? s + tag.length : s + '[ATENÇÃO]\n'.length;
   ta.setSelectionRange(pos, pos);
-  syncHighlight(taId, taId.replace('textarea', 'highlight'));
-}
-
-function syncHighlight(taId, hlId) {
-  var ta = document.getElementById(taId);
-  var hl = document.getElementById(hlId);
-  if (!ta || !hl) return;
-  hl.innerHTML = buildHighlight(ta.value) + '\n';
-  hl.style.height = ta.offsetHeight + 'px';
-}
-
-function syncScroll(taId, hlId) {
-  var ta = document.getElementById(taId);
-  var hl = document.getElementById(hlId);
-  if (ta && hl) hl.scrollTop = ta.scrollTop;
 }
 
 function insertTerm(taId) {
@@ -296,7 +226,6 @@ function saveTerm() {
       }
       if (idx >= 0) glossaryTerms[idx] = { term: data.term, definition: data.definition };
       else glossaryTerms.push({ term: data.term, definition: data.definition });
-      if (activeTextareaId) syncHighlight(activeTextareaId, activeTextareaId.replace('textarea', 'highlight'));
       showToast(data.created ? '✓ Termo cadastrado!' : '✓ Termo atualizado!');
       closeTermModal();
     } else {
@@ -307,7 +236,6 @@ function saveTerm() {
 
 document.addEventListener('DOMContentLoaded', function() {
   glossaryTerms = JSON.parse(document.getElementById('glossary-data').textContent);
-  syncHighlight('edit-textarea', 'edit-highlight');
 
   document.getElementById('term-modal').addEventListener('click', function(e) {
     if (e.target === this) closeTermModal();

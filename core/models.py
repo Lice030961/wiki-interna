@@ -30,6 +30,7 @@ class MinorTopic(models.Model):
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=10, blank=True)
     order = models.PositiveIntegerField(default=0)
+    is_territory_map = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -86,3 +87,37 @@ class GlossaryTerm(models.Model):
 
     def __str__(self):
         return self.term
+
+
+class Regiao(models.Model):
+    nome = models.CharField(max_length=200)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'nome']
+
+    def __str__(self):
+        return self.nome
+
+
+class Territorio(models.Model):
+    regiao = models.ForeignKey(Regiao, on_delete=models.CASCADE, related_name='territorios')
+    nome = models.CharField(max_length=200)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'nome']
+
+    def __str__(self):
+        return f'{self.regiao.nome} → {self.nome}'
+
+
+class Cidade(models.Model):
+    territorio = models.ForeignKey(Territorio, on_delete=models.CASCADE, related_name='cidades')
+    nome = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome

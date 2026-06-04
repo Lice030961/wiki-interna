@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Gerenciar Regionais{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-10">
+
+  <div class="mb-6 flex items-center gap-2 text-sm text-gray-400">
+    <a href="{% url 'admin_dashboard' %}" class="hover:text-brand-red transition">Painel</a>
+    <span>/</span>
+    <span class="text-gray-700 font-medium">Regionais</span>
+  </div>
+
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-extrabold text-gray-900">Gerenciar Regionais</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Regiões → Territórios → Cidades</p>
+    </div>
+    <a href="{% url 'admin_regiao_create' %}"
+       class="bg-brand-red text-white font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-brand-redhov transition">
+      + Nova Região
+    </a>
+  </div>
+
+  {% if regioes %}
+  <div class="space-y-4">
+    {% for regiao in regioes %}
+    <div class="border-2 border-gray-100 rounded-2xl overflow-hidden">
+
+      <!-- Cabeçalho da Região -->
+      <div class="flex items-center gap-3 px-5 py-4 bg-gray-50 border-b border-gray-100">
+        <span class="text-xl">🌎</span>
+        <span class="font-bold text-gray-900 flex-1">{{ regiao.nome }}</span>
+        <div class="flex gap-2 shrink-0">
+          <a href="{% url 'admin_territorio_create' %}?regiao_id={{ regiao.id }}"
+             class="bg-brand-yellow text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition">
+            + Território
+          </a>
+          <a href="{% url 'admin_regiao_edit' regiao.id %}"
+             class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+            Editar
+          </a>
+          <form method="post" action="{% url 'admin_regiao_delete' regiao.id %}"
+                onsubmit="return confirm('Excluir a região {{ regiao.nome }} e todos seus territórios e cidades?')">
+            {% csrf_token %}
+            <button type="submit"
+                    class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+              Excluir
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Territórios -->
+      {% if regiao.territorios.all %}
+      <div class="divide-y divide-gray-100">
+        {% for territorio in regiao.territorios.all %}
+        <div>
+          <!-- Linha do Território -->
+          <div class="flex items-center gap-3 px-5 py-3 pl-10 bg-white">
+            <span class="text-base">📍</span>
+            <span class="font-semibold text-gray-800 text-sm flex-1">{{ territorio.nome }}</span>
+            <div class="flex gap-2 shrink-0">
+              <a href="{% url 'admin_cidade_create' %}?territorio_id={{ territorio.id }}"
+                 class="border border-brand-yellow text-brand-yellow font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-yellow-50 transition">
+                + Cidades
+              </a>
+              <a href="{% url 'admin_territorio_edit' territorio.id %}"
+                 class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+                Editar
+              </a>
+              <form method="post" action="{% url 'admin_territorio_delete' territorio.id %}"
+                    onsubmit="return confirm('Excluir o território {{ territorio.nome }} e todas suas cidades?')">
+                {% csrf_token %}
+                <button type="submit"
+                        class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                  Excluir
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Cidades -->
+          {% if territorio.cidades.all %}
+          <div class="px-16 pb-3 pt-1 bg-white flex flex-wrap gap-2">
+            {% for cidade in territorio.cidades.all %}
+            <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 text-xs">
+              <span class="text-gray-700">{{ cidade.nome }}</span>
+              <a href="{% url 'admin_cidade_edit' cidade.id %}"
+                 class="text-gray-400 hover:text-brand-red transition ml-1" title="Editar">✏️</a>
+              <form method="post" action="{% url 'admin_cidade_delete' cidade.id %}"
+                    onsubmit="return confirm('Excluir {{ cidade.nome }}?')" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-gray-400 hover:text-red-500 transition" title="Excluir">✕</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="px-16 pb-3 text-xs text-gray-400 italic bg-white">Nenhuma cidade. Clique em "+ Cidades" para adicionar.</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="px-10 py-4 text-xs text-gray-400 italic">Nenhum território. Clique em "+ Território" para adicionar.</p>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-20 text-gray-400">
+    <p class="text-6xl mb-4">🗺️</p>
+    <p class="font-semibold text-gray-600">Nenhuma região cadastrada.</p>
+    <p class="text-sm mt-1">Clique em "+ Nova Região" para começar.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
