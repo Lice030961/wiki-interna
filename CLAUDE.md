@@ -61,6 +61,39 @@ Defined in Tailwind config inside each template:
 - `brand-yellow`: `#FFD100`
 - Background: white (`#ffffff`)
 
+## Antes de entregar para servidor interno (fazer como etapa final)
+
+### 1. Tailwind CDN → arquivo estático
+Atualmente o CSS é carregado via CDN (`cdn.tailwindcss.com`). Se o servidor interno não tiver acesso à internet, o site ficará sem estilo. Resolver antes da entrega:
+
+1. Baixar o executável standalone em https://github.com/tailwindlabs/tailwindcss/releases (`tailwindcss-windows-x64.exe`) — não precisa de Node.js
+2. Gerar o CSS:
+   ```bash
+   tailwindcss.exe -i - -o static/css/tailwind.css --content "templates/**/*.html" --minify
+   ```
+3. Em `templates/base.html`, substituir as duas tags do Tailwind por:
+   ```html
+   <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+   ```
+4. Rodar `python manage.py collectstatic`
+
+> Se forem adicionadas classes Tailwind novas nos templates depois disso, rodar o passo 2 novamente.
+
+### 2. Organizar views.py
+`core/views.py` já tem mais de 400 linhas. Antes da entrega, separar em:
+- `core/views/public.py` — home, search, major_topic, minor_topic
+- `core/views/auth.py` — login_view, logout_view
+- `core/views/admin.py` — todo o painel admin (tópicos, blocos, glossário, regionais)
+- `core/views/__init__.py` — importa tudo para manter URLs funcionando sem alteração
+
+### 3. Configurações de produção
+Ajustar antes de subir no servidor interno:
+- `DEBUG=False` no `.env`
+- `ALLOWED_HOSTS=<ip-do-servidor>` no `.env` (e lido em `settings.py`)
+- Instalar Gunicorn: `pip install gunicorn`
+- Iniciar com: `gunicorn wiki_project.wsgi:application --bind 0.0.0.0:8000`
+- Colocar Nginx na frente para servir `static/` e `media/` diretamente
+
 ## File structure
 ```
 wiki/
