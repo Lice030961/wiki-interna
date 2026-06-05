@@ -16,6 +16,11 @@ CSRF_TRUSTED_ORIGINS = os.getenv(
     'https://*.app.github.dev,https://fantastic-tribble-gxq7wjgvjv7qhv75q-8000.app.github.dev,https://localhost:8000'
 ).split(',')
 
+_render_host = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if _render_host:
+    ALLOWED_HOSTS.append(_render_host)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
