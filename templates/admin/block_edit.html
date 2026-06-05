@@ -40,7 +40,12 @@
     </div>
 
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">
+        {% if content_block.block_type == 'link' %}URL
+        {% elif content_block.block_type == 'checklist' %}Itens
+        {% elif content_block.block_type == 'image' or content_block.block_type == 'video' %}Legenda
+        {% else %}Conteúdo{% endif %}
+      </label>
 
       <!-- Barra de formatação -->
       <div class="flex items-center gap-1 border border-gray-300 border-b-0 rounded-t-lg px-2 py-1.5 bg-gray-50 flex-wrap">

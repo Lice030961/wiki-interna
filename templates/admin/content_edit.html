@@ -54,6 +54,7 @@
           {% elif block.block_type == 'checklist' %}✅
           {% elif block.block_type == 'image' %}🖼️
           {% elif block.block_type == 'video' %}🎬
+          {% elif block.block_type == 'link' %}🔗
           {% endif %}
         </span>
         <span class="font-semibold text-sm text-gray-700 flex-1">
@@ -77,6 +78,8 @@
       <div class="px-4 py-3 text-sm text-gray-600 bg-white">
         {% if block.block_type == 'text' or block.block_type == 'checklist' %}
         <p class="line-clamp-3 whitespace-pre-wrap text-xs">{{ block.content|truncatechars:200 }}</p>
+        {% elif block.block_type == 'link' %}
+        <p class="text-xs text-brand-red truncate">{{ block.content }}</p>
         {% elif block.file %}
         <p class="text-xs text-gray-400">Arquivo: {{ block.file.name }}</p>
         {% else %}
@@ -110,9 +113,9 @@
         <input type="text" name="title"
                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
       </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
-        <div class="flex items-center gap-1 border border-gray-300 border-b-0 rounded-t-lg px-2 py-1.5 bg-gray-50 flex-wrap">
+      <div id="add-content-wrap">
+        <label id="add-content-label" class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
+        <div id="add-fmt-toolbar" class="flex items-center gap-1 border border-gray-300 border-b-0 rounded-t-lg px-2 py-1.5 bg-gray-50 flex-wrap">
           <button type="button" onclick="fmt('content-textarea', 'bold')" class="fmt-btn font-bold" title="Negrito">B</button>
           <button type="button" onclick="fmt('content-textarea', 'italic')" class="fmt-btn italic" title="Itálico">I</button>
           <button type="button" onclick="fmt('content-textarea', 'underline')" class="fmt-btn underline" title="Sublinhado">U</button>
@@ -135,7 +138,7 @@
                   placeholder="Para texto: escreva o conteúdo. Para checklist: um item por linha."
                   class="w-full border border-gray-300 rounded-b-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y font-mono"></textarea>
       </div>
-      <div>
+      <div id="add-file-wrap">
         <label class="block text-sm font-semibold text-gray-700 mb-1">Arquivo (imagem ou vídeo)</label>
         <input type="file" name="file" accept="image/*,video/*"
                class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
@@ -297,6 +300,41 @@ function saveTerm() {
   });
 }
 
+// ── Tipo de bloco: mostrar/ocultar campos ─────────────────────────────────────
+var TYPE_CONFIG = {
+  text:      { content: true,  file: false, toolbar: true,  label: 'Conteúdo',      placeholder: 'Escreva o conteúdo em texto.' },
+  checklist: { content: true,  file: false, toolbar: true,  label: 'Itens',         placeholder: 'Um item por linha.' },
+  link:      { content: true,  file: false, toolbar: false, label: 'URL',           placeholder: 'https://...' },
+  image:     { content: false, file: true,  toolbar: false, label: 'Legenda',       placeholder: '' },
+  video:     { content: false, file: true,  toolbar: false, label: 'Legenda',       placeholder: '' },
+};
+
+function updateAddForm(type) {
+  var cfg = TYPE_CONFIG[type] || TYPE_CONFIG.text;
+  var contentWrap = document.getElementById('add-content-wrap');
+  var fileWrap    = document.getElementById('add-file-wrap');
+  var toolbar     = document.getElementById('add-fmt-toolbar');
+  var label       = document.getElementById('add-content-label');
+  var textarea    = document.getElementById('content-textarea');
+
+  if (contentWrap) contentWrap.style.display = cfg.content ? '' : 'none';
+  if (fileWrap)    fileWrap.style.display    = cfg.file    ? '' : 'none';
+  if (toolbar)     toolbar.style.display     = cfg.toolbar ? '' : 'none';
+  if (label)       label.textContent         = cfg.label + (cfg.content ? '' : '');
+  if (textarea) {
+    textarea.placeholder = cfg.placeholder;
+    // textarea sem toolbar: remover arredondamento topo
+    textarea.className = textarea.className
+      .replace('rounded-b-lg', '')
+      .replace('border border-gray-300', '');
+    if (cfg.toolbar) {
+      textarea.classList.add('border', 'border-gray-300', 'rounded-b-lg');
+    } else {
+      textarea.classList.add('border', 'border-gray-300', 'rounded-lg');
+    }
+  }
+}
+
 // ── Drag blocos ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   glossaryTerms = JSON.parse(document.getElementById('glossary-data').textContent);
@@ -321,6 +359,15 @@ document.addEventListener('DOMContentLoaded', function() {
       },
     });
   }
+
+  // Inicializa visibilidade conforme o radio já selecionado
+  var checkedRadio = document.querySelector('input[name="block_type"]:checked');
+  if (checkedRadio) updateAddForm(checkedRadio.value);
+
+  // Atualiza ao mudar o tipo
+  document.querySelectorAll('input[name="block_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() { updateAddForm(this.value); });
+  });
 
   document.getElementById('term-modal').addEventListener('click', function(e) {
     if (e.target === this) closeTermModal();
