@@ -52,11 +52,13 @@ class ContentBlock(models.Model):
     IMAGE = 'image'
     VIDEO = 'video'
     CHECKLIST = 'checklist'
+    LINK = 'link'
     BLOCK_TYPES = [
         (TEXT, 'Texto'),
         (IMAGE, 'Imagem'),
         (VIDEO, 'Vídeo'),
         (CHECKLIST, 'Checklist'),
+        (LINK, 'Link'),
     ]
 
     minor_topic = models.ForeignKey(MinorTopic, on_delete=models.CASCADE, related_name='blocks')
