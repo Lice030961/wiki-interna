@@ -19,12 +19,8 @@ python manage.py runserver
 ```
 Server runs at http://127.0.0.1:8000
 
-## Credentials (set in .env)
-| Role   | Username | Password  |
-|--------|----------|-----------|
-| Admin  | admin    | admin123  |
-
-Change via `.env` → `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
+## Credentials
+Admin user is created directly in the database. Password is managed via Django Admin (`/django-admin/`).
 
 ## Key URLs
 | URL | Purpose |
@@ -93,6 +89,36 @@ Ajustar antes de subir no servidor interno:
 - Instalar Gunicorn: `pip install gunicorn`
 - Iniciar com: `gunicorn wiki_project.wsgi:application --bind 0.0.0.0:8000`
 - Colocar Nginx na frente para servir `static/` e `media/` diretamente
+
+## Ideia futura: Simulador de atendimento
+
+Seção separada da wiki para treinar fluxos de suporte de provedor de internet. Acessível por uma aba no nav (`/simulador/`), fora da navegação em 3 camadas existente.
+
+### Conceito
+- Empresas mock pré-definidas com suas informações e planos de internet — sempre as mesmas, fixas
+- Usuário acessa o simulador e cria um novo caso para praticar
+- Os detalhes do caso (empresa, plano, tipo de problema) são gerados aleatoriamente a partir dos dados fixos
+
+### Dados mock (sem banco de dados)
+Hardcoded em JS estático — dados fixos, sem modelo Django.
+
+### Estado durante a sessão
+O caso gerado vive na memória do navegador (JS) enquanto o usuário está na página. Não persiste entre sessões — comportamento intencional.
+
+### O que precisaria implementar
+- `templates/simulador.html` — interface da página
+- `static/js/simulador.js` — dados das empresas + lógica de geração aleatória
+- Uma view simples em `core/views.py`
+- Uma URL: `/simulador/`
+- Link no `base.html` para a nova seção
+- Zero novos modelos Django
+
+### Detalhes a definir
+- Quais empresas e planos existirão
+- Quais tipos de caso serão gerados (cancelamento, reagendamento, etc.)
+- Como será a interface de resolução do caso
+
+---
 
 ## File structure
 ```
