@@ -19,3 +19,6 @@ class MinorTopicAdmin(admin.ModelAdmin):
 class ContentBlockAdmin(admin.ModelAdmin):
     list_display = ('minor_topic', 'block_type', 'title', 'order')
     list_filter = ('block_type', 'minor_topic__major_topic')
+
+    class Media:
+        js = ('js/admin_content_block.js',)
