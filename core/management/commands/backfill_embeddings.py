@@ -26,7 +26,8 @@ class Command(BaseCommand):
 
         ok, failed, skipped = 0, 0, 0
         for block in blocks:
-            if not chatbot.block_index_text(block):
+            has_image_to_process = block.block_type == ContentBlock.IMAGE and block.file
+            if not chatbot.block_index_text(block) and not has_image_to_process:
                 skipped += 1
                 continue
             chatbot.update_block_embedding(block)
