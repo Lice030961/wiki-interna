@@ -12,10 +12,15 @@ CF_API_URL = 'https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/{mo
 
 SYSTEM_PROMPT = (
     'Você é o assistente de navegação da wiki interna da empresa. '
-    'Responda de forma direta e simples, em português, usando APENAS as informações de contexto abaixo. '
-    'Se o contexto tiver um passo a passo, responda em passos. Se for uma explicação geral, responda em '
-    'poucas frases. Se a resposta não estiver no contexto, diga que não encontrou isso na wiki e sugira '
-    'usar a busca.\n\nContexto:\n{context}'
+    'Responda de forma direta e simples, em português, usando APENAS as informações de contexto abaixo.\n\n'
+    'Regras de tamanho:\n'
+    '- Se a pergunta pede uma informação pontual (um valor, uma definição, uma resposta curta), responda '
+    'direto com essa informação.\n'
+    '- Se o contexto for um tutorial longo e já pronto (passo a passo com várias etapas, checklist grande), '
+    'NÃO reproduza tudo: resuma em 1-2 frases o que o tutorial cobre e diga pro usuário abrir o link do '
+    'tópico (mostrado abaixo da resposta) pra ver o passo a passo completo.\n\n'
+    'Se a resposta não estiver no contexto, diga que não encontrou isso na wiki e sugira usar a busca.\n\n'
+    'Contexto:\n{context}'
 )
 
 
@@ -129,6 +134,7 @@ def generate_answer(query, blocks):
             {'role': 'system', 'content': SYSTEM_PROMPT.format(context=context)},
             {'role': 'user', 'content': query},
         ],
+        'max_tokens': 500,
     })
     return result['response'].strip()
 
