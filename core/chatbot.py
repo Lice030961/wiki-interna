@@ -5,6 +5,8 @@ Fluxo: pergunta -> embedding -> busca por similaridade nos ContentBlock ->
 os trechos mais relevantes viram contexto para o modelo de chat, que só
 formata a resposta em cima deles (não inventa fora do conteúdo da wiki).
 """
+import unicodedata
+
 import requests
 from django.conf import settings
 
@@ -85,8 +87,17 @@ def cosine_similarity(a, b):
 
 
 def block_index_text(block):
-    """Texto usado para gerar o embedding de um bloco de conteúdo."""
-    parts = [block.title, block.content, block.image_description]
+    """Texto usado para gerar o embedding de um bloco de conteúdo.
+    Inclui o título dos tópicos pai: muitos blocos não repetem no título/conteúdo
+    o assunto (ex.: SLA) porque a página já mostra o nome do tópico — sem isso o
+    embedding do bloco não tem nenhuma relação com o nome do tópico em que ele está."""
+    parts = [
+        block.minor_topic.major_topic.title,
+        block.minor_topic.title,
+        block.title,
+        block.content,
+        block.image_description,
+    ]
     return '\n'.join(p for p in parts if p).strip()
 
 
@@ -112,16 +123,47 @@ def update_block_embedding(block):
     type(block).objects.filter(pk=block.pk).update(embedding=embedding)
 
 
-def search_relevant_blocks(query, top_k=4):
+def _normalize(text):
+    """minúsculas e sem acento, pra comparar 'SLA'/'sla', 'PPPoE'/'pppoe' etc."""
+    decomposed = unicodedata.normalize('NFKD', text or '')
+    return ''.join(c for c in decomposed if not unicodedata.combining(c)).lower()
+
+
+def _topic_keyword_boost(query_norm, block):
+    """Reforço léxico: siglas curtas de tópico (SLA, PPPoE...) às vezes não ficam
+    bem separadas umas das outras no espaço vetorial do modelo multilíngue — se o
+    nome do tópico aparece literalmente na pergunta, garante que o bloco não fique
+    de fora só por causa da similaridade semântica."""
+    for title in (block.minor_topic.title, block.minor_topic.major_topic.title):
+        title_norm = _normalize(title)
+        if len(title_norm) >= 3 and title_norm in query_norm:
+            return 0.25
+    return 0.0
+
+
+def search_relevant_blocks(query, top_k=6):
     from core.models import ContentBlock
 
     query_embedding = get_embedding(query)
+    query_norm = _normalize(query)
     candidates = ContentBlock.objects.exclude(embedding__isnull=True).select_related(
         'minor_topic', 'minor_topic__major_topic'
     )
-    scored = [(cosine_similarity(query_embedding, block.embedding), block) for block in candidates]
+    scored = [
+        (cosine_similarity(query_embedding, block.embedding) + _topic_keyword_boost(query_norm, block), block)
+        for block in candidates
+    ]
     scored.sort(key=lambda pair: pair[0], reverse=True)
-    return [block for score, block in scored[:top_k] if score > 0.3]
+    if not scored:
+        return []
+
+    # Corte relativo em vez de threshold fixo: quando a melhor resposta é muito boa,
+    # descarta ruído distante; quando a melhor é só razoável, ainda deixa passar as
+    # próximas — um limiar fixo (ex. score > 0.3) tanto deixava passar lixo quanto
+    # descartava blocos bons dependendo de quem mais competia pelo top_k naquela busca.
+    best_score = scored[0][0]
+    floor = max(0.3, best_score - 0.15)
+    return [block for score, block in scored[:top_k] if score >= floor]
 
 
 def generate_answer(query, blocks):
