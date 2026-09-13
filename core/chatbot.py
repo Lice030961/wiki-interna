@@ -98,7 +98,7 @@ def block_index_text(block):
         block.minor_topic.major_topic.title,
         block.minor_topic.title,
         block.title,
-        block.content,
+        block.content if block.block_type != block.LINK else '',  # content é só a URL, sem valor semântico
         block.image_description,
     ]
     return '\n'.join(p for p in parts if p).strip()
@@ -174,6 +174,43 @@ def _topic_keyword_boost(query_words, block):
     return best * 0.3
 
 
+def _regional_context(query):
+    """Contexto extra sobre Região > Território > Cidade.
+
+    Essa hierarquia é uma tabela estruturada própria (Regiao/Territorio/Cidade),
+    não um ContentBlock — não tem embedding e nunca aparecia na busca semântica,
+    então perguntas do tipo "qual território é Sumaré?" nunca encontravam nada.
+    Aqui, como é um conjunto pequeno e fechado de nomes próprios, um casamento
+    léxico direto (nome aparece na pergunta?) é mais confiável que embedding.
+    """
+    from core.models import MinorTopic, Regiao
+
+    query_norm = _normalize(query)
+    lines = []
+    for regiao in Regiao.objects.prefetch_related('territorios__cidades'):
+        regiao_norm = _normalize(regiao.nome)
+        regiao_mentioned = len(regiao_norm) >= 3 and regiao_norm in query_norm
+        for territorio in regiao.territorios.all():
+            territorio_norm = _normalize(territorio.nome)
+            territorio_mentioned = len(territorio_norm) >= 3 and territorio_norm in query_norm
+            cidades = list(territorio.cidades.all())
+            cidade_mentioned = any(
+                len(_normalize(c.nome)) >= 3 and _normalize(c.nome) in query_norm for c in cidades
+            )
+            if regiao_mentioned or territorio_mentioned or cidade_mentioned:
+                nomes = ', '.join(c.nome for c in cidades) or '(nenhuma cidade cadastrada)'
+                lines.append(f'Território "{territorio.nome}" pertence à região "{regiao.nome}" e cobre: {nomes}.')
+
+    if not lines:
+        return None, None
+
+    topic = MinorTopic.objects.filter(is_territory_map=True).select_related('major_topic').first()
+    source = None
+    if topic:
+        source = {'title': topic.title, 'url': f'/topico/{topic.major_topic.slug}/{topic.slug}/'}
+    return '\n'.join(lines), source
+
+
 def search_relevant_blocks(query, max_topics=3):
     """Busca os blocos mais relevantes, agrupados por sub-tópico: rankeia tópicos
     (não blocos soltos) pra evitar que o mesmo assunto apareça espalhado e repetido
@@ -211,7 +248,7 @@ def search_relevant_blocks(query, max_topics=3):
     return selected
 
 
-def generate_answer(query, blocks):
+def generate_answer(query, blocks, regional_text=None):
     # Agrupa por tópico (1 cabeçalho por tópico, mesmo com vários blocos) — do
     # contrário o mesmo nome de tópico aparece repetido várias vezes no contexto
     # e o modelo tende a repeti-lo de volta na resposta.
@@ -224,10 +261,14 @@ def generate_answer(query, blocks):
             order.append(key)
         topics[key]['texts'].append(block_index_text(b))
 
-    context = '\n\n'.join(
+    context_parts = [
         f"[Tópico: {topics[key]['label']}]\n" + '\n'.join(topics[key]['texts'])
         for key in order
-    )
+    ]
+    if regional_text:
+        context_parts.append(f'[Regionais: cidades, territórios e regiões de atendimento]\n{regional_text}')
+
+    context = '\n\n'.join(context_parts)
     result = _cf_run(settings.CF_CHAT_MODEL, {
         'messages': [
             {'role': 'system', 'content': SYSTEM_PROMPT.format(context=context)},
@@ -240,13 +281,15 @@ def generate_answer(query, blocks):
 
 def answer_question(query):
     blocks = search_relevant_blocks(query)
-    if not blocks:
+    regional_text, regional_source = _regional_context(query)
+
+    if not blocks and not regional_text:
         return {
             'answer': 'Não encontrei nada na wiki sobre isso. Tenta reformular ou usar a busca no topo da página.',
             'sources': [],
         }
 
-    answer = generate_answer(query, blocks)
+    answer = generate_answer(query, blocks, regional_text)
 
     sources = []
     seen_urls = set()
@@ -255,5 +298,8 @@ def answer_question(query):
         if url not in seen_urls:
             seen_urls.add(url)
             sources.append({'title': b.minor_topic.title, 'url': url})
+    if regional_source and regional_source['url'] not in seen_urls:
+        seen_urls.add(regional_source['url'])
+        sources.append(regional_source)
 
     return {'answer': answer, 'sources': sources}
