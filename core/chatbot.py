@@ -5,6 +5,7 @@ Fluxo: pergunta -> embedding -> busca por similaridade nos ContentBlock ->
 os trechos mais relevantes viram contexto para o modelo de chat, que só
 formata a resposta em cima deles (não inventa fora do conteúdo da wiki).
 """
+import re
 import unicodedata
 
 import requests
@@ -21,6 +22,8 @@ SYSTEM_PROMPT = (
     '- Se o contexto for um tutorial longo e já pronto (passo a passo com várias etapas, checklist grande), '
     'NÃO reproduza tudo: resuma em 1-2 frases o que o tutorial cobre e diga pro usuário abrir o link do '
     'tópico (mostrado abaixo da resposta) pra ver o passo a passo completo.\n\n'
+    '- Cite cada tópico da wiki no máximo uma vez ao longo da resposta — não repita o nome do mesmo tópico '
+    'várias vezes, os links pra cada tópico citado já aparecem separadamente abaixo da resposta.\n\n'
     'Se a resposta não estiver no contexto, diga que não encontrou isso na wiki e sugira usar a busca.\n\n'
     'Contexto:\n{context}'
 )
@@ -129,47 +132,101 @@ def _normalize(text):
     return ''.join(c for c in decomposed if not unicodedata.combining(c)).lower()
 
 
-def _topic_keyword_boost(query_norm, block):
-    """Reforço léxico: siglas curtas de tópico (SLA, PPPoE...) às vezes não ficam
-    bem separadas umas das outras no espaço vetorial do modelo multilíngue — se o
-    nome do tópico aparece literalmente na pergunta, garante que o bloco não fique
-    de fora só por causa da similaridade semântica."""
+_STOPWORDS = {
+    'a', 'o', 'os', 'as', 'de', 'da', 'do', 'das', 'dos', 'em', 'no', 'na', 'nos', 'nas',
+    'um', 'uma', 'uns', 'umas', 'e', 'ou', 'que', 'como', 'para', 'pra', 'por', 'com', 'sem',
+    'eu', 'me', 'minha', 'meu', 'isso', 'essa', 'esse', 'ao', 'aos', 'se', 'sua', 'seu', 'tem',
+    'ter', 'ha', 'la', 'lo',
+}
+
+# Vocabulário de atendimento onde a pergunta do usuário e o título do tópico usam
+# palavras diferentes pra mesma ação/conceito (ex.: "como eu ABRO uma SA" quer dizer
+# "como CRIAR uma SA" — o tópico se chama "Como Criar SA", não "abrir").
+_SYNONYMS = {
+    'abro': 'criar', 'abrir': 'criar', 'abertura': 'criar', 'aberto': 'criar', 'abra': 'criar',
+    'gerar': 'criar', 'gero': 'criar', 'fazer': 'criar', 'faço': 'criar', 'cadastrar': 'criar',
+    'criacao': 'criar',
+    'erro': 'erro', 'erros': 'erro', 'falha': 'erro', 'falhou': 'erro', 'problema': 'erro',
+    'travou': 'erro', 'travando': 'erro',
+}
+
+
+def _concept_words(text):
+    """Palavras normalizadas e relevantes de um texto pra comparar pergunta x título de
+    tópico: sem acento, sem stopword, com sinônimos comuns de atendimento unificados."""
+    words = re.findall(r'[a-z0-9]+', _normalize(text))
+    return {_SYNONYMS.get(w, w) for w in words if w not in _STOPWORDS and len(w) > 1}
+
+
+def _topic_keyword_boost(query_words, block):
+    """Reforço léxico proporcional à fração de palavras-chave do tópico (título do
+    tópico maior/menor, já passadas por sinônimo) que aparecem na pergunta. Cobre
+    tanto siglas curtas (SA, INC) quanto verbos equivalentes (abrir/criar) que o
+    embedding multilíngue nem sempre aproxima bem — e desempata a favor do tópico
+    mais específico quando dois títulos compartilham a mesma sigla."""
+    best = 0.0
     for title in (block.minor_topic.title, block.minor_topic.major_topic.title):
-        title_norm = _normalize(title)
-        if len(title_norm) >= 3 and title_norm in query_norm:
-            return 0.25
-    return 0.0
+        title_words = _concept_words(title)
+        if not title_words:
+            continue
+        overlap = len(title_words & query_words) / len(title_words)
+        best = max(best, overlap)
+    return best * 0.3
 
 
-def search_relevant_blocks(query, top_k=6):
+def search_relevant_blocks(query, max_topics=3):
+    """Busca os blocos mais relevantes, agrupados por sub-tópico: rankeia tópicos
+    (não blocos soltos) pra evitar que o mesmo assunto apareça espalhado e repetido
+    no contexto do LLM, e corta por relevância relativa ao melhor resultado em vez
+    de um threshold fixo, que deixava passar ruído ou descartava bons resultados
+    dependendo de quantos outros blocos competiam na mesma busca."""
     from core.models import ContentBlock
 
     query_embedding = get_embedding(query)
-    query_norm = _normalize(query)
+    query_words = _concept_words(query)
     candidates = ContentBlock.objects.exclude(embedding__isnull=True).select_related(
         'minor_topic', 'minor_topic__major_topic'
     )
-    scored = [
-        (cosine_similarity(query_embedding, block.embedding) + _topic_keyword_boost(query_norm, block), block)
-        for block in candidates
-    ]
-    scored.sort(key=lambda pair: pair[0], reverse=True)
-    if not scored:
+
+    topics = {}
+    for block in candidates:
+        score = cosine_similarity(query_embedding, block.embedding)
+        score += _topic_keyword_boost(query_words, block)
+        topic = topics.setdefault(block.minor_topic_id, {'score': 0.0, 'blocks': []})
+        topic['blocks'].append((score, block))
+        topic['score'] = max(topic['score'], score)
+
+    if not topics:
         return []
 
-    # Corte relativo em vez de threshold fixo: quando a melhor resposta é muito boa,
-    # descarta ruído distante; quando a melhor é só razoável, ainda deixa passar as
-    # próximas — um limiar fixo (ex. score > 0.3) tanto deixava passar lixo quanto
-    # descartava blocos bons dependendo de quem mais competia pelo top_k naquela busca.
-    best_score = scored[0][0]
+    ranked = sorted(topics.values(), key=lambda t: t['score'], reverse=True)
+    best_score = ranked[0]['score']
     floor = max(0.3, best_score - 0.15)
-    return [block for score, block in scored[:top_k] if score >= floor]
+
+    selected = []
+    for topic in ranked[:max_topics]:
+        if topic['score'] < floor:
+            break
+        selected.extend(b for score, b in sorted(topic['blocks'], key=lambda p: p[0], reverse=True) if score >= floor)
+    return selected
 
 
 def generate_answer(query, blocks):
+    # Agrupa por tópico (1 cabeçalho por tópico, mesmo com vários blocos) — do
+    # contrário o mesmo nome de tópico aparece repetido várias vezes no contexto
+    # e o modelo tende a repeti-lo de volta na resposta.
+    topics = {}
+    order = []
+    for b in blocks:
+        key = b.minor_topic_id
+        if key not in topics:
+            topics[key] = {'label': f'{b.minor_topic.major_topic.title} > {b.minor_topic.title}', 'texts': []}
+            order.append(key)
+        topics[key]['texts'].append(block_index_text(b))
+
     context = '\n\n'.join(
-        f'[Tópico: {b.minor_topic.major_topic.title} > {b.minor_topic.title}]\n{block_index_text(b)}'
-        for b in blocks
+        f"[Tópico: {topics[key]['label']}]\n" + '\n'.join(topics[key]['texts'])
+        for key in order
     )
     result = _cf_run(settings.CF_CHAT_MODEL, {
         'messages': [
