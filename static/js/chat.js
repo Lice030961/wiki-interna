@@ -31,6 +31,20 @@ function addMessage(text, from, sources) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function addTyping() {
+  const bubble = document.createElement('div');
+  bubble.id = 'chat-typing';
+  bubble.className = 'bg-gray-100 rounded-lg px-3 py-2 w-fit typing-dots';
+  bubble.innerHTML = '<span></span><span></span><span></span>';
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('chat-typing');
+  if (el) el.remove();
+}
+
 if (chatToggle) {
   chatToggle.addEventListener('click', () => {
     chatPanel.classList.toggle('hidden');
@@ -49,6 +63,7 @@ if (chatToggle) {
     addMessage(question, 'user');
     chatInput.value = '';
     chatInput.disabled = true;
+    addTyping();
 
     fetch('/chat/', {
       method: 'POST',
@@ -60,13 +75,17 @@ if (chatToggle) {
     })
       .then(r => r.json())
       .then(data => {
+        removeTyping();
         if (data.error) {
           addMessage(data.error, 'bot');
         } else {
           addMessage(data.answer, 'bot', data.sources);
         }
       })
-      .catch(() => addMessage('Erro ao falar com o assistente. Tenta de novo.', 'bot'))
+      .catch(() => {
+        removeTyping();
+        addMessage('Erro ao falar com o assistente. Tenta de novo.', 'bot');
+      })
       .finally(() => { chatInput.disabled = false; chatInput.focus(); });
   });
 }
