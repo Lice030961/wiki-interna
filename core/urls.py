@@ -6,6 +6,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('busca/', views.search, name='search'),
+    path('chat/', views.chat, name='chat'),
 
     # Layers 2 & 3
     path('topico/<slug:major_slug>/', views.major_topic, name='major_topic'),

@@ -1,0 +1,72 @@
+// Widget de chat flutuante (assistente da wiki)
+const chatToggle = document.getElementById('chat-toggle');
+const chatPanel = document.getElementById('chat-panel');
+const chatClose = document.getElementById('chat-close');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatMessages = document.getElementById('chat-messages');
+
+function getCsrfToken() {
+  const input = chatForm.querySelector('input[name=csrfmiddlewaretoken]');
+  return input ? input.value : null;
+}
+
+function addMessage(text, from, sources) {
+  const bubble = document.createElement('div');
+  bubble.className = from === 'user'
+    ? 'ml-auto bg-brand-yellow/20 text-gray-900 rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-wrap'
+    : 'bg-gray-100 text-gray-900 rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-wrap';
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+
+  if (sources && sources.length) {
+    const links = document.createElement('div');
+    links.className = 'flex flex-col gap-1 max-w-[85%]';
+    links.innerHTML = sources.map(s =>
+      `<a href="${s.url}" class="text-xs text-brand-red hover:underline">🔗 ${s.title}</a>`
+    ).join('');
+    chatMessages.appendChild(links);
+  }
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+if (chatToggle) {
+  chatToggle.addEventListener('click', () => {
+    chatPanel.classList.toggle('hidden');
+    if (!chatPanel.classList.contains('hidden') && !chatMessages.children.length) {
+      addMessage('Oi! Pergunte algo sobre os conteúdos da wiki.', 'bot');
+    }
+  });
+
+  chatClose.addEventListener('click', () => chatPanel.classList.add('hidden'));
+
+  chatForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const question = chatInput.value.trim();
+    if (!question) return;
+
+    addMessage(question, 'user');
+    chatInput.value = '';
+    chatInput.disabled = true;
+
+    fetch('/chat/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      body: JSON.stringify({ question }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          addMessage(data.error, 'bot');
+        } else {
+          addMessage(data.answer, 'bot', data.sources);
+        }
+      })
+      .catch(() => addMessage('Erro ao falar com o assistente. Tenta de novo.', 'bot'))
+      .finally(() => { chatInput.disabled = false; chatInput.focus(); });
+  });
+}

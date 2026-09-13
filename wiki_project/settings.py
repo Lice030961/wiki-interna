@@ -109,6 +109,12 @@ else:
         'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
     }
 
+# Chatbot (RAG via Cloudflare Workers AI) — mesma conta Cloudflare do R2
+CF_ACCOUNT_ID = os.getenv('CF_ACCOUNT_ID') or os.getenv('R2_ACCOUNT_ID')
+CF_API_TOKEN = os.getenv('CF_API_TOKEN')
+CF_EMBED_MODEL = os.getenv('CF_EMBED_MODEL', '@cf/baai/bge-base-en-v1.5')
+CF_CHAT_MODEL = os.getenv('CF_CHAT_MODEL', '@cf/meta/llama-3.1-8b-instruct')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'

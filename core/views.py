@@ -10,6 +10,7 @@ from django.utils.safestring import mark_safe
 from django.db.models import Q
 
 from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade
+from . import chatbot
 
 
 def is_admin(user):
@@ -162,6 +163,31 @@ def search(request):
                 })
 
     return JsonResponse({'results': results})
+
+
+# ── Chatbot ───────────────────────────────────────────────────────────────────
+
+def chat(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Requisição inválida.'}, status=400)
+
+    question = (data.get('question') or '').strip()
+    if not question:
+        return JsonResponse({'error': 'Digite uma pergunta.'}, status=400)
+
+    try:
+        result = chatbot.answer_question(question)
+    except chatbot.ChatbotError as e:
+        return JsonResponse({'error': str(e)}, status=503)
+    except Exception:
+        return JsonResponse({'error': 'Não foi possível responder agora. Tenta de novo em instantes.'}, status=502)
+
+    return JsonResponse(result)
 
 
 # ── Major Topic ───────────────────────────────────────────────────────────────
@@ -353,6 +379,7 @@ def admin_block_add(request, major_slug, minor_slug):
         if request.FILES.get('file'):
             block.file = request.FILES['file']
         block.save()
+        chatbot.update_block_embedding(block)
     return redirect('admin_content_edit', major_slug=major_slug, minor_slug=minor_slug)
 
 
@@ -368,6 +395,7 @@ def admin_block_edit(request, block_id):
         if request.FILES.get('file'):
             block.file = request.FILES['file']
         block.save()
+        chatbot.update_block_embedding(block)
         return redirect('admin_content_edit', major_slug=major_slug, minor_slug=minor_slug)
     terms = GlossaryTerm.objects.all()
     return render(request, 'admin/block_edit.html', {

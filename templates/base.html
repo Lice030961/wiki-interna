@@ -92,7 +92,32 @@
     </div>
   </footer>
 
+  <div id="chat-widget" class="fixed bottom-4 right-4 z-50 flex flex-col items-end">
+    <div id="chat-panel"
+         class="hidden mb-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] h-96 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+      <div class="bg-brand-red text-white text-sm font-bold px-4 py-3 flex items-center justify-between">
+        <span>Assistente da Wiki</span>
+        <button id="chat-close" class="text-white/80 hover:text-white text-lg leading-none">&times;</button>
+      </div>
+      <div id="chat-messages" class="flex-1 overflow-y-auto px-3 py-3 space-y-3 text-sm"></div>
+      <form id="chat-form" class="border-t border-gray-100 flex items-center gap-2 p-2">
+        {% csrf_token %}
+        <input id="chat-input" type="text" placeholder="Pergunte algo sobre a wiki..." autocomplete="off"
+               class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+        <button type="submit"
+                class="bg-brand-yellow text-white font-bold text-sm px-3 py-2 rounded-lg hover:bg-brand-yellhov transition">
+          Enviar
+        </button>
+      </form>
+    </div>
+    <button id="chat-toggle"
+            class="bg-brand-red text-white rounded-full w-14 h-14 shadow-xl flex items-center justify-center text-2xl hover:bg-brand-redhov transition">
+      💬
+    </button>
+  </div>
+
   <script src="{% static 'js/search.js' %}"></script>
+  <script src="{% static 'js/chat.js' %}"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
