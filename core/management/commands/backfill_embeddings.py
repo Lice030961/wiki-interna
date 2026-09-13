@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
 from core.models import ContentBlock
 from core import chatbot
@@ -11,7 +12,12 @@ class Command(BaseCommand):
         parser.add_argument('--force', action='store_true', help='Recalcula mesmo os blocos que já têm embedding.')
 
     def handle(self, *args, **options):
-        blocks = ContentBlock.objects.all() if options['force'] else ContentBlock.objects.filter(embedding__isnull=True)
+        if options['force']:
+            blocks = ContentBlock.objects.all()
+        else:
+            blocks = ContentBlock.objects.filter(
+                Q(embedding__isnull=True) | Q(block_type=ContentBlock.IMAGE, image_description='')
+            )
 
         total = blocks.count()
         if not total:

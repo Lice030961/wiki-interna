@@ -394,6 +394,7 @@ def admin_block_edit(request, block_id):
         block.content = request.POST.get('content', '').strip()
         if request.FILES.get('file'):
             block.file = request.FILES['file']
+            block.image_description = ''
         block.save()
         chatbot.update_block_embedding(block)
         return redirect('admin_content_edit', major_slug=major_slug, minor_slug=minor_slug)

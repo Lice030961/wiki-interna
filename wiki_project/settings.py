@@ -114,6 +114,7 @@ CF_ACCOUNT_ID = os.getenv('CF_ACCOUNT_ID') or os.getenv('R2_ACCOUNT_ID')
 CF_API_TOKEN = os.getenv('CF_API_TOKEN')
 CF_EMBED_MODEL = os.getenv('CF_EMBED_MODEL', '@cf/baai/bge-base-en-v1.5')
 CF_CHAT_MODEL = os.getenv('CF_CHAT_MODEL', '@cf/meta/llama-3.1-8b-instruct')
+CF_VISION_MODEL = os.getenv('CF_VISION_MODEL', '@cf/llava-hf/llava-1.5-7b-hf')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

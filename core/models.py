@@ -68,6 +68,7 @@ class ContentBlock(models.Model):
     file = models.FileField(upload_to='uploads/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
     embedding = models.JSONField(blank=True, null=True, editable=False)
+    image_description = models.TextField(blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

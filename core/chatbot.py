@@ -23,7 +23,7 @@ class ChatbotError(Exception):
     pass
 
 
-def _cf_run(model, payload):
+def _cf_run(model, payload, timeout=30):
     account_id = getattr(settings, 'CF_ACCOUNT_ID', None)
     api_token = getattr(settings, 'CF_API_TOKEN', None)
     if not account_id or not api_token:
@@ -31,7 +31,11 @@ def _cf_run(model, payload):
 
     url = CF_API_URL.format(account=account_id, model=model)
     headers = {'Authorization': f'Bearer {api_token}'}
-    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    if response.status_code == 429:
+        raise ChatbotError(
+            'Os neurons diários da Workers AI acabaram por hoje 🤖💤 Tenta de novo amanhã, ou usa a busca aqui em cima.'
+        )
     response.raise_for_status()
     data = response.json()
     if not data.get('success', True):
@@ -42,6 +46,28 @@ def _cf_run(model, payload):
 def get_embedding(text):
     result = _cf_run(settings.CF_EMBED_MODEL, {'text': [text]})
     return result['data'][0]
+
+
+IMAGE_PROMPT = (
+    'Descreva esta imagem em português: liste todo texto visível (botões, campos, menus, mensagens de erro) '
+    'e o que está sendo mostrado, de forma objetiva, como legenda de um passo de tutorial interno.'
+)
+
+
+def describe_image(file_field):
+    """Usa um modelo de visão da Workers AI pra extrair texto/contexto de uma imagem de bloco."""
+    file_field.open('rb')
+    try:
+        image_bytes = file_field.read()
+    finally:
+        file_field.close()
+
+    result = _cf_run(settings.CF_VISION_MODEL, {
+        'image': list(image_bytes),
+        'prompt': IMAGE_PROMPT,
+        'max_tokens': 512,
+    }, timeout=60)
+    return (result.get('description') or result.get('response') or '').strip()
 
 
 def cosine_similarity(a, b):
@@ -55,12 +81,22 @@ def cosine_similarity(a, b):
 
 def block_index_text(block):
     """Texto usado para gerar o embedding de um bloco de conteúdo."""
-    return f'{block.title}\n{block.content}'.strip()
+    parts = [block.title, block.content, block.image_description]
+    return '\n'.join(p for p in parts if p).strip()
 
 
 def update_block_embedding(block):
-    """Recalcula e salva o embedding de um bloco. Falha em silêncio (rede/API fora do ar
-    não pode quebrar o fluxo de edição de conteúdo do admin)."""
+    """Recalcula e salva o embedding (e a descrição de imagem, se for o caso) de um bloco.
+    Falha em silêncio (rede/API fora do ar não pode quebrar o fluxo de edição do admin)."""
+    if block.block_type == block.IMAGE and block.file and not block.image_description:
+        try:
+            description = describe_image(block.file)
+        except (requests.RequestException, ChatbotError):
+            description = ''
+        if description:
+            block.image_description = description
+            type(block).objects.filter(pk=block.pk).update(image_description=description)
+
     text = block_index_text(block)
     if not text:
         return
