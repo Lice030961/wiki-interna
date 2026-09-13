@@ -90,33 +90,50 @@ Ajustar antes de subir no servidor interno:
 - Iniciar com: `gunicorn wiki_project.wsgi:application --bind 0.0.0.0:8000`
 - Colocar Nginx na frente para servir `static/` e `media/` diretamente
 
-## Ideia futura: Simulador de atendimento
+## Simulador de atendimento (projeto separado)
 
-Seção separada da wiki para treinar fluxos de suporte de provedor de internet. Acessível por uma aba no nav (`/simulador/`), fora da navegação em 3 camadas existente.
+Plataforma separada para treinar fluxos de suporte de provedor de internet. **Não faz parte deste repositório** — terá repo próprio no GitHub, hospedado no Render (backend) + Neon (PostgreSQL).
 
-### Conceito
-- Empresas mock pré-definidas com suas informações e planos de internet — sempre as mesmas, fixas
-- Usuário acessa o simulador e cria um novo caso para praticar
-- Os detalhes do caso (empresa, plano, tipo de problema) são gerados aleatoriamente a partir dos dados fixos
+### Decisões de arquitetura
+- **Repositório próprio** — projeto independente da wiki
+- **Hosting**: Render (web service) + Neon (PostgreSQL); cold start e perda de progresso ao fechar a aba são aceitáveis
+- **Estado do caso**: vive em memória de sessão (JS/sessionStorage) enquanto o usuário está na página; não persiste entre sessões — comportamento intencional, já que casos duram poucos minutos
+- **Banco de dados**: usado apenas para estrutura (tabelas de casos, fluxos, empresas mock) — sem persistência de dados por usuário entre sessões
 
-### Dados mock (sem banco de dados)
-Hardcoded em JS estático — dados fixos, sem modelo Django.
+### UI: simulação de navegador
+- Tela única com múltiplas abas simulando os sistemas que o atendente usa no dia a dia
+- Não criar todos os botões/campos de cara — cada elemento de UI é adicionado quando um caso real exigir aquela funcionalidade
+- Desenvolvimento incremental: pega-se um fluxo real da empresa → adiciona os botões e informações relevantes → repete para o próximo caso
 
-### Estado durante a sessão
-O caso gerado vive na memória do navegador (JS) enquanto o usuário está na página. Não persiste entre sessões — comportamento intencional.
+### Modos de uso
 
-### O que precisaria implementar
-- `templates/simulador.html` — interface da página
-- `static/js/simulador.js` — dados das empresas + lógica de geração aleatória
-- Uma view simples em `core/views.py`
-- Uma URL: `/simulador/`
-- Link no `base.html` para a nova seção
-- Zero novos modelos Django
+#### Modo Tutorial (guiado)
+- Casos pré-estabelecidos com passo a passo obrigatório
+- Tela escurecida com foco apenas nos elementos relevantes do momento
+- Instruções explícitas: "Aqui você precisa pesquisar o PPPoE no campo X para encontrar Y"
+- Obriga o usuário a seguir padronizações (ex.: sempre incluir justificativa nas notas)
+- Usuário não pode pular etapas
 
-### Detalhes a definir
+#### Modo Prática (livre)
+- Caso aleatório ou pré-selecionado gerado para o usuário praticar sozinho
+- Sem guia visual — usuário resolve como sabe
+- Sistema vai mostrando como está indo (feedback em tempo real ou ao final)
+- Casos com múltiplas soluções válidas: a ser definido quando houver mais conhecimento sobre os fluxos reais das plataformas
+
+### Regra de um caso por vez (sistema de fases)
+- Enquanto há um caso aberto, o usuário não pode iniciar outro
+- Garante que a validação do fluxo faça sentido (não mistura contextos)
+- Caso encerrado (resolvido ou abandonado) → libera para iniciar um novo
+
+### Dados mock
+- Empresas e planos fixos, hardcoded (JS ou fixture Django)
+- Tipos de caso a definir a partir dos fluxos reais da empresa (cancelamento, reagendamento, etc.)
+
+### O que ainda precisa ser definido
 - Quais empresas e planos existirão
-- Quais tipos de caso serão gerados (cancelamento, reagendamento, etc.)
-- Como será a interface de resolução do caso
+- Quais fluxos/casos serão o ponto de partida do desenvolvimento
+- Como representar "passos válidos" de um caso (estrutura de dados)
+- Se o progresso dentro de um tutorial deve ser persistido (banco) ou só em sessão
 
 ---
 
