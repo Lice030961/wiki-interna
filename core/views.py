@@ -180,8 +180,10 @@ def chat(request):
     if not question:
         return JsonResponse({'error': 'Digite uma pergunta.'}, status=400)
 
+    history = data.get('history') if isinstance(data.get('history'), list) else None
+
     try:
-        result = chatbot.answer_question(question)
+        result = chatbot.answer_question(question, history=history)
     except chatbot.ChatbotError as e:
         return JsonResponse({'error': str(e)}, status=503)
     except Exception:

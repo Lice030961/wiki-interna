@@ -10,11 +10,24 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--force', action='store_true', help='Recalcula mesmo os blocos que já têm embedding.')
+        parser.add_argument(
+            '--recaption-images', action='store_true',
+            help='Limpa a image_description de todo bloco de imagem e gera de novo com o CF_VISION_MODEL '
+                 'atual (usar depois de trocar o modelo de visão, pra reprocessar imagens já cadastradas).',
+        )
 
     def handle(self, *args, **options):
+        if options['recaption_images']:
+            ContentBlock.objects.filter(block_type=ContentBlock.IMAGE).exclude(image_description='').update(
+                image_description=''
+            )
+
         if options['force']:
             blocks = ContentBlock.objects.all()
         else:
+            # --recaption-images já limpou image_description acima, então esse filtro sozinho
+            # pega todo bloco de imagem pra reprocessar, sem tocar nos blocos de texto que já
+            # têm embedding (mais barato que rodar tudo de novo com --force).
             blocks = ContentBlock.objects.filter(
                 Q(embedding__isnull=True) | Q(block_type=ContentBlock.IMAGE, image_description='')
             )

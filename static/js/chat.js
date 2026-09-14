@@ -6,6 +6,14 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatMessages = document.getElementById('chat-messages');
 
+const MAX_HISTORY_TURNS = 3; // "poucas mensagens" — espelha MAX_HISTORY_TURNS em core/chatbot.py
+let chatHistory = []; // [{role: 'user'|'assistant', content}], só em memória (zera ao recarregar a página)
+
+function pushHistory(role, content) {
+  chatHistory.push({ role, content });
+  chatHistory = chatHistory.slice(-MAX_HISTORY_TURNS * 2);
+}
+
 function getCsrfToken() {
   const input = chatForm.querySelector('input[name=csrfmiddlewaretoken]');
   return input ? input.value : null;
@@ -71,7 +79,7 @@ if (chatToggle) {
         'Content-Type': 'application/json',
         'X-CSRFToken': getCsrfToken(),
       },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, history: chatHistory }),
     })
       .then(r => r.json())
       .then(data => {
@@ -80,6 +88,8 @@ if (chatToggle) {
           addMessage(data.error, 'bot');
         } else {
           addMessage(data.answer, 'bot', data.sources);
+          pushHistory('user', question);
+          pushHistory('assistant', data.answer);
         }
       })
       .catch(() => {

@@ -5,6 +5,9 @@ Fluxo: pergunta -> embedding -> busca por similaridade nos ContentBlock ->
 os trechos mais relevantes viram contexto para o modelo de chat, que só
 formata a resposta em cima deles (não inventa fora do conteúdo da wiki).
 """
+import base64
+import difflib
+import mimetypes
 import re
 import unicodedata
 
@@ -22,6 +25,11 @@ SYSTEM_PROMPT = (
     '- Se o contexto for um tutorial longo e já pronto (passo a passo com várias etapas, checklist grande), '
     'NÃO reproduza tudo: resuma em 1-2 frases o que o tutorial cobre e diga pro usuário abrir o link do '
     'tópico (mostrado abaixo da resposta) pra ver o passo a passo completo.\n\n'
+    '- O contexto pode incluir descrições de imagens. Se o tópico tiver várias imagens em sequência '
+    '(prints de passo a passo, tipo tutorial visual), NÃO narre cada imagem: resuma o que o tutorial '
+    'mostra e diga pro usuário abrir o link. Mas se a pergunta pede um dado específico (valor, prazo, '
+    'nome de campo etc.) que só aparece descrito em UMA imagem, cite esse dado exato normalmente, como '
+    'citaria uma informação em texto.\n\n'
     '- Cite cada tópico da wiki no máximo uma vez ao longo da resposta — não repita o nome do mesmo tópico '
     'várias vezes, os links pra cada tópico citado já aparecem separadamente abaixo da resposta.\n\n'
     'Se a resposta não estiver no contexto, diga que não encontrou isso na wiki e sugira usar a busca.\n\n'
@@ -72,12 +80,14 @@ def describe_image(file_field):
     finally:
         file_field.close()
 
+    mime_type = mimetypes.guess_type(file_field.name)[0] or 'image/png'
+    image_b64 = base64.b64encode(image_bytes).decode('ascii')
     result = _cf_run(settings.CF_VISION_MODEL, {
-        'image': list(image_bytes),
-        'prompt': IMAGE_PROMPT,
+        'messages': [{'role': 'user', 'content': IMAGE_PROMPT}],
+        'image': f'data:{mime_type};base64,{image_b64}',
         'max_tokens': 512,
     }, timeout=60)
-    return (result.get('description') or result.get('response') or '').strip()
+    return (result.get('response') or result.get('description') or '').strip()
 
 
 def cosine_similarity(a, b):
@@ -158,18 +168,32 @@ def _concept_words(text):
     return {_SYNONYMS.get(w, w) for w in words if w not in _STOPWORDS and len(w) > 1}
 
 
+def _word_matches(title_word, query_words):
+    """True se title_word aparece exato na pergunta, ou (pra palavras não muito curtas,
+    onde siglas tipo "SA"/"INC" ficariam sujeitas a falso positivo) bem próximo de
+    alguma palavra da pergunta — cobre erro de digitação comum (ex. "abertura" vs
+    "abertua", "credenciais" vs "credenciai")."""
+    if title_word in query_words:
+        return True
+    if len(title_word) < 4:
+        return False
+    return bool(difflib.get_close_matches(title_word, query_words, n=1, cutoff=0.8))
+
+
 def _topic_keyword_boost(query_words, block):
     """Reforço léxico proporcional à fração de palavras-chave do tópico (título do
     tópico maior/menor, já passadas por sinônimo) que aparecem na pergunta. Cobre
     tanto siglas curtas (SA, INC) quanto verbos equivalentes (abrir/criar) que o
-    embedding multilíngue nem sempre aproxima bem — e desempata a favor do tópico
-    mais específico quando dois títulos compartilham a mesma sigla."""
+    embedding multilíngue nem sempre aproxima bem, além de pequenos erros de
+    digitação — e desempata a favor do tópico mais específico quando dois títulos
+    compartilham a mesma sigla."""
     best = 0.0
     for title in (block.minor_topic.title, block.minor_topic.major_topic.title):
         title_words = _concept_words(title)
         if not title_words:
             continue
-        overlap = len(title_words & query_words) / len(title_words)
+        matched = sum(1 for w in title_words if _word_matches(w, query_words))
+        overlap = matched / len(title_words)
         best = max(best, overlap)
     return best * 0.3
 
@@ -211,7 +235,31 @@ def _regional_context(query):
     return '\n'.join(lines), source
 
 
-def search_relevant_blocks(query, max_topics=3):
+MAX_HISTORY_TURNS = 3  # "poucas mensagens": últimas N trocas usuário/assistente, nada além disso
+
+
+def _clean_history(history):
+    """Valida e corta o histórico recebido do client pros últimos MAX_HISTORY_TURNS
+    pares — defensivo mesmo que o front já limite, pra não deixar o custo por
+    pergunta crescer sem controle se o array do client crescer."""
+    if not history:
+        return []
+    cleaned = [
+        {'role': h.get('role'), 'content': (h.get('content') or '').strip()}
+        for h in history
+        if isinstance(h, dict) and h.get('role') in ('user', 'assistant') and (h.get('content') or '').strip()
+    ]
+    return cleaned[-MAX_HISTORY_TURNS * 2:]
+
+
+def _recent_user_messages(history, limit=2):
+    """Últimas mensagens do usuário no histórico, pra dar contexto de assunto à busca
+    (ex.: "e como acho tais informações?" sozinho não diz que o assunto é SA)."""
+    user_messages = [h['content'] for h in history if h['role'] == 'user']
+    return user_messages[-limit:]
+
+
+def search_relevant_blocks(query, history=None, max_topics=3):
     """Busca os blocos mais relevantes, agrupados por sub-tópico: rankeia tópicos
     (não blocos soltos) pra evitar que o mesmo assunto apareça espalhado e repetido
     no contexto do LLM, e corta por relevância relativa ao melhor resultado em vez
@@ -219,8 +267,9 @@ def search_relevant_blocks(query, max_topics=3):
     dependendo de quantos outros blocos competiam na mesma busca."""
     from core.models import ContentBlock
 
-    query_embedding = get_embedding(query)
-    query_words = _concept_words(query)
+    retrieval_text = ' '.join(_recent_user_messages(history or []) + [query])
+    query_embedding = get_embedding(retrieval_text)
+    query_words = _concept_words(retrieval_text)
     candidates = ContentBlock.objects.exclude(embedding__isnull=True).select_related(
         'minor_topic', 'minor_topic__major_topic'
     )
@@ -248,7 +297,7 @@ def search_relevant_blocks(query, max_topics=3):
     return selected
 
 
-def generate_answer(query, blocks, regional_text=None):
+def generate_answer(query, blocks, regional_text=None, history=None):
     # Agrupa por tópico (1 cabeçalho por tópico, mesmo com vários blocos) — do
     # contrário o mesmo nome de tópico aparece repetido várias vezes no contexto
     # e o modelo tende a repeti-lo de volta na resposta.
@@ -269,18 +318,20 @@ def generate_answer(query, blocks, regional_text=None):
         context_parts.append(f'[Regionais: cidades, territórios e regiões de atendimento]\n{regional_text}')
 
     context = '\n\n'.join(context_parts)
+    messages = [{'role': 'system', 'content': SYSTEM_PROMPT.format(context=context)}]
+    messages.extend({'role': h['role'], 'content': h['content']} for h in (history or []))
+    messages.append({'role': 'user', 'content': query})
+
     result = _cf_run(settings.CF_CHAT_MODEL, {
-        'messages': [
-            {'role': 'system', 'content': SYSTEM_PROMPT.format(context=context)},
-            {'role': 'user', 'content': query},
-        ],
-        'max_tokens': 500,
+        'messages': messages,
+        'max_tokens': 700,
     })
     return result['response'].strip()
 
 
-def answer_question(query):
-    blocks = search_relevant_blocks(query)
+def answer_question(query, history=None):
+    history = _clean_history(history)
+    blocks = search_relevant_blocks(query, history=history)
     regional_text, regional_source = _regional_context(query)
 
     if not blocks and not regional_text:
@@ -289,7 +340,7 @@ def answer_question(query):
             'sources': [],
         }
 
-    answer = generate_answer(query, blocks, regional_text)
+    answer = generate_answer(query, blocks, regional_text, history=history)
 
     sources = []
     seen_urls = set()
