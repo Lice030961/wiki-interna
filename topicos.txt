@@ -3,7 +3,7 @@
 🔎 Pesquise por:
 - SA
 - INC
-- GLPI
+- HelpDesk
 - Telefonia
 - Massiva
 - Cliente
@@ -34,7 +34,7 @@
 📄 👉 COMO LOCALIZAR CLIENTE
 📄 👉 COMO CRIAR SA
 📄 👉 ERROS AO ABRIR SA
-📄 👉 COMO ABRIR GLPI
+📄 👉 COMO ABRIR HELPDESK
 📄 👉 IDENTIFICAR PROBLEMA
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -51,7 +51,7 @@
 🔎 Pesquise por:
 - SA
 - INC
-- GLPI
+- HelpDesk
 - Telefonia
 - Massiva
 - Cliente
@@ -82,7 +82,7 @@
 📄 👉 COMO LOCALIZAR CLIENTE
 📄 👉 COMO CRIAR SA
 📄 👉 ERROS AO ABRIR SA
-📄 👉 COMO ABRIR GLPI
+📄 👉 COMO ABRIR HELPDESK
 📄 👉 IDENTIFICAR PROBLEMA
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -95,8 +95,8 @@
 
 📍 CHECKLIST DE ATENDIMENTO
 
-☐ Cliente localizado no SIS  
-☐ Solicitação analisada  
+☐ Cliente localizado no CRM
+☐ Solicitação analisada
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -111,41 +111,41 @@
 
 📍 SE FOR PROBLEMA DA EMPRESA
 
-☐ Criar SA no :contentReference[oaicite:1]{index=1}  
+☐ Criar SA no CRM
 
-👉 COMO CRIAR SA  
+👉 COMO CRIAR SA
 
 ☐ Houve erro?
 
-👉 ERROS AO ABRIR SA  
+👉 ERROS AO ABRIR SA
 
 ☐ Não resolveu?
 
-👉 ABRIR GLPI  
+👉 ABRIR HELPDESK
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
 📍 PÓS-CRIAÇÃO DE SA
 
-☐ Adicionar na planilha COP  
-☐ Adicionar na planilha Remedy Premium  
-☐ Encerrar INC  
+☐ Adicionar na planilha de acompanhamento
+☐ Adicionar na planilha de controle
+☐ Encerrar INC
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
 📍 OBSERVAÇÕES
 
-- SA deve conter script padrão  
-- Corrigir endereço (caso ADM tenha múltiplos links)  
+- SA deve conter script padrão
+- Corrigir endereço (caso o cadastro tenha múltiplos links)
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
 📍 ATENÇÃO
 
 ⚠️ Caso sem SA:
-- Manter INC aberto  
-- Acionar COP  
-- Monitorar manualmente  
+- Manter INC aberto
+- Acionar a Central de Operações
+- Monitorar manualmente
 
 📌 TELEFONIA (ATA / VOIP)
 
@@ -167,7 +167,7 @@
 ☐ Linhas registradas no sistema?
 
 🔹 NÃO:
-☐ Abrir Lecom (STFC)  
+☐ Abrir sistema de registro telefônico (STFC)
 ☐ Solicitar “forçar registro”  
 ☐ Validar com cliente  
 
@@ -199,9 +199,9 @@
 
 📌 MASSIVA
 
-☐ Cliente localizado no SIS  
+☐ Cliente localizado no CRM
 
-☐ Verificada notificação de massiva  
+☐ Verificada notificação de massiva
 
 ━━━━━━━━━━━━━━━━━━━━━━
 

@@ -6,7 +6,7 @@ from core import chatbot
 
 DEMO_CONTENT = [
     ('Como Criar SA', ContentBlock.CHECKLIST, 'Passo a passo', (
-        'Acesse o sistema SIS com seu login\n'
+        'Acesse o CRM com seu login\n'
         'Localize o cliente pelo CPF ou código do contrato\n'
         'Clique em "Nova SA" no menu de atendimento\n'
         'Selecione o tipo de solicitação (manutenção, mudança de plano, etc.)\n'
@@ -20,8 +20,8 @@ DEMO_CONTENT = [
         'antes de tentar novamente. Se o sistema travar na confirmação, atualize a página e reabra o atendimento '
         '— não feche o navegador, pois a SA pode já ter sido criada em duplicidade.'
     )),
-    ('Como Abrir GLPI', ContentBlock.CHECKLIST, 'Passo a passo', (
-        'Acesse o GLPI com seu login de atendente\n'
+    ('Como Abrir HelpDesk', ContentBlock.CHECKLIST, 'Passo a passo', (
+        'Acesse o HelpDesk com seu login de atendente\n'
         'Clique em "Criar chamado"\n'
         'Selecione a categoria correspondente ao problema\n'
         'Descreva o problema com o máximo de detalhes técnicos\n'
@@ -33,7 +33,7 @@ DEMO_CONTENT = [
         'Ao identificar uma solicitação de manutenção, primeiro confirme se o problema é pontual (um cliente) ou '
         'se há uma massiva na região. Teste a conexão remotamente pelo sistema antes de agendar visita técnica. '
         'Se o problema persistir, abra uma SA de manutenção e, se for necessário suporte da rede, acione o NOC '
-        'pelo GLPI.'
+        'pelo HelpDesk.'
     )),
 ]
 

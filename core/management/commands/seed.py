@@ -56,10 +56,10 @@ class Command(BaseCommand):
                 'icon': '📄',
                 'description': 'Passo a passo para as tarefas mais comuns',
                 'minor': [
-                    ('Como Localizar Cliente', '🔍', 'Passo a passo para localizar cliente no SIS'),
+                    ('Como Localizar Cliente', '🔍', 'Passo a passo para localizar cliente no CRM'),
                     ('Como Criar SA', '📝', 'Passo a passo para abertura de SA'),
                     ('Erros ao Abrir SA', '⚠️', 'Principais erros e como resolver'),
-                    ('Como Abrir GLPI', '🖥️', 'Passo a passo para abrir chamado no GLPI'),
+                    ('Como Abrir HelpDesk', '🖥️', 'Passo a passo para abrir chamado no HelpDesk'),
                     ('Identificar Problema', '🔎', 'Como identificar a origem do problema'),
                 ],
             },
@@ -68,7 +68,7 @@ class Command(BaseCommand):
                 'icon': '📚',
                 'description': 'Siglas e termos utilizados no sistema',
                 'minor': [
-                    ('Siglas do Sistema', '🔤', 'Significado das siglas SA, INC, GLPI, NOC e outras'),
+                    ('Siglas do Sistema', '🔤', 'Significado das siglas SA, INC, HelpDesk, NOC e outras'),
                 ],
             },
         ]
