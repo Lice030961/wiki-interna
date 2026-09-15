@@ -68,7 +68,11 @@ def get_embedding(text):
 
 IMAGE_PROMPT = (
     'Descreva esta imagem em português: liste todo texto visível (botões, campos, menus, mensagens de erro) '
-    'e o que está sendo mostrado, de forma objetiva, como legenda de um passo de tutorial interno.'
+    'e o que está sendo mostrado, de forma objetiva, como legenda de um passo de tutorial interno.\n\n'
+    'Se a imagem tiver seções, colunas ou quadrantes com um título/rótulo (ex.: "SLA 4 HORAS") e uma lista de '
+    'itens associados a esse título (ex.: nomes de planos), NÃO liste os itens soltos: descreva cada seção '
+    'separadamente no formato "Sob [título da seção]: item 1, item 2, ...", preservando exatamente essa '
+    'associação. Não misture itens de seções diferentes.'
 )
 
 
