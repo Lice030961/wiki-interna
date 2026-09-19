@@ -1,13 +1,16 @@
 # Wiki Interna — CLAUDE.md
 
 ## Project overview
-Company-internal wiki platform. Red, Yellow and White themed. Two fixed accounts (admin + reader). Three-layer navigation: Home → Major Topic page → Minor Topic page (single-page with content blocks).
+Company-internal wiki platform. Red, Yellow and White themed. Two fixed accounts (admin + reader). Three-layer navigation: Home → Major Topic page → Minor Topic page (single-page with content blocks). Also mirrored to a public portfolio repo with genericized demo content (`topicos.txt` and seed commands use fictional tool names, not real internal systems).
 
 ## Stack
 - **Backend**: Django 5.2 (Python 3.10)
 - **Frontend**: Django templates + Tailwind CSS (CDN Play) + vanilla JavaScript
-- **Database**: SQLite (`db.sqlite3`)
-- **File uploads**: Django's `MEDIA_ROOT` → `media/uploads/`
+- **Database**: SQLite locally (`db.sqlite3`); Postgres in production via `DATABASE_URL` (`dj-database-url`)
+- **File uploads**: `MEDIA_ROOT` → `media/uploads/` locally; Cloudflare R2 (S3-compatible, via `django-storages`) in production when `R2_ACCESS_KEY_ID` is set
+- **Static files**: WhiteNoise (`CompressedManifestStaticFilesStorage`) — no Nginx needed
+- **Production server**: Gunicorn, deployed on Render (`render.yaml`)
+- **Chatbot (RAG)**: Cloudflare Workers AI — embeddings (`bge-m3`), chat (`llama-3.3-70b-instruct`), vision (`llama-3.2-11b-vision`) — see `core/chatbot.py`
 
 ## Running the server
 ```bash
@@ -30,20 +33,32 @@ Admin user is created directly in the database. Password is managed via Django A
 | `/topico/<major_slug>/` | Major topic page (Layer 2) |
 | `/topico/<major_slug>/<minor_slug>/` | Minor topic page (Layer 3) |
 | `/busca/?q=<query>` | Search JSON API |
+| `/chat/` | Chatbot JSON API (RAG over wiki content) |
 | `/admin-wiki/dashboard/` | Admin panel (admin only) |
 | `/django-admin/` | Django built-in admin |
 
 ## Models (`core/models.py`)
 - `MajorTopic` — top-level topic (Layer 2 pages)
-- `MinorTopic` — sub-topic under a major (Layer 3 pages), FK to MajorTopic
-- `ContentBlock` — content inside a minor topic; types: `text`, `image`, `video`, `checklist`
+- `MinorTopic` — sub-topic under a major (Layer 3 pages), FK to MajorTopic. `is_territory_map=True` renders a special `regionais.html` page instead of content blocks.
+- `ContentBlock` — content inside a minor topic; types: `text`, `image`, `video`, `checklist`, `link`. Also stores `embedding` and `image_description`, used only by the chatbot.
+- `GlossaryTerm` — global glossary; any matching word in rendered text/checklists gets an auto tooltip.
+- `Regiao` → `Territorio` → `Cidade` — geographic hierarchy for the regionais page, separate from the topic tree.
 
 ## Content blocks
 Admins add blocks via `/admin-wiki/topico/<major>/<minor>/conteudo/`. Block types:
-- **Texto** — free text, rendered with `whitespace-pre-wrap`
+- **Texto** — free text, rendered with `whitespace-pre-wrap`, supports a small markdown-like syntax (`**bold**`, `_italic_`, `__underline__`, `~~strike~~`, `` `code` ``, `[ATENÇÃO]...[/ATENÇÃO]`) plus glossary tooltips
 - **Checklist** — one item per line, rendered as interactive checkboxes
-- **Imagem** — file upload, rendered as `<img>`
+- **Imagem** — file upload, rendered as `<img>`; auto-described by the vision model for chatbot search
 - **Vídeo** — file upload, rendered as `<video>`
+- **Link** — external URL
+
+## Chatbot (RAG)
+`core/chatbot.py` implements retrieval-augmented generation over the wiki's own content:
+1. On block create/edit, an embedding is generated (images are first described by the vision model) and stored on `ContentBlock.embedding`.
+2. A question hits `/chat/`, gets embedded, and is matched by cosine similarity against block embeddings, with a lexical keyword boost (synonyms, typo tolerance) to catch cases the embedding misses (acronyms like "SA"/"INC").
+3. The regional hierarchy (`Regiao`/`Territorio`/`Cidade`) is matched separately via direct text matching, since it's structured data with no embedding.
+4. Matched blocks become context for the chat model, which answers only from that context and returns `{answer, sources}` (sources link back to the relevant topic pages).
+5. Keeps a short conversation history (last 3 turns, client-sent, server-trimmed).
 
 ## Seed command
 ```bash
@@ -57,10 +72,10 @@ Defined in Tailwind config inside each template:
 - `brand-yellow`: `#FFD100`
 - Background: white (`#ffffff`)
 
-## Antes de entregar para servidor interno (fazer como etapa final)
+## Pendências conhecidas
 
-### 1. Tailwind CDN → arquivo estático
-Atualmente o CSS é carregado via CDN (`cdn.tailwindcss.com`). Se o servidor interno não tiver acesso à internet, o site ficará sem estilo. Resolver antes da entrega:
+### 1. Tailwind CDN → arquivo estático (ainda não feito)
+Atualmente o CSS é carregado via CDN (`cdn.tailwindcss.com`). Se o servidor de destino não tiver acesso à internet, o site fica sem estilo. Resolver quando necessário:
 
 1. Baixar o executável standalone em https://github.com/tailwindlabs/tailwindcss/releases (`tailwindcss-windows-x64.exe`) — não precisa de Node.js
 2. Gerar o CSS:
@@ -75,20 +90,15 @@ Atualmente o CSS é carregado via CDN (`cdn.tailwindcss.com`). Se o servidor int
 
 > Se forem adicionadas classes Tailwind novas nos templates depois disso, rodar o passo 2 novamente.
 
-### 2. Organizar views.py
-`core/views.py` já tem mais de 400 linhas. Antes da entrega, separar em:
-- `core/views/public.py` — home, search, major_topic, minor_topic
+### 2. Organizar views.py (ainda não feito)
+`core/views.py` já tem mais de 600 linhas. Separar em:
+- `core/views/public.py` — home, search, chat, major_topic, minor_topic
 - `core/views/auth.py` — login_view, logout_view
 - `core/views/admin.py` — todo o painel admin (tópicos, blocos, glossário, regionais)
 - `core/views/__init__.py` — importa tudo para manter URLs funcionando sem alteração
 
-### 3. Configurações de produção
-Ajustar antes de subir no servidor interno:
-- `DEBUG=False` no `.env`
-- `ALLOWED_HOSTS=<ip-do-servidor>` no `.env` (e lido em `settings.py`)
-- Instalar Gunicorn: `pip install gunicorn`
-- Iniciar com: `gunicorn wiki_project.wsgi:application --bind 0.0.0.0:8000`
-- Colocar Nginx na frente para servir `static/` e `media/` diretamente
+### 3. Configuração de produção (feito — hospedado no Render)
+O deploy já roda em produção via `render.yaml`: `DEBUG=False`, `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` lidos de env vars (com fallback automático para o hostname do Render), Gunicorn como servidor WSGI, WhiteNoise servindo estáticos (sem precisar de Nginx), Postgres via `DATABASE_URL` e mídia no Cloudflare R2. As env vars do chatbot (`CF_ACCOUNT_ID`, `CF_API_TOKEN`, etc.) precisam ser configuradas manualmente no painel do Render (não têm `generateValue` no `render.yaml`).
 
 ## Simulador de atendimento (projeto separado)
 
@@ -141,20 +151,24 @@ Plataforma separada para treinar fluxos de suporte de provedor de internet. **N�
 ```
 wiki/
 ├── core/                   # Main Django app
-│   ├── models.py           # MajorTopic, MinorTopic, ContentBlock
-│   ├── views.py            # All views (auth, public, admin)
+│   ├── models.py           # MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao/Territorio/Cidade
+│   ├── views.py            # All views (auth, public, admin) — still monolithic, see Pendências
+│   ├── chatbot.py           # RAG chatbot (Cloudflare Workers AI)
 │   ├── urls.py             # URL patterns
-│   └── management/commands/seed.py
+│   └── management/commands/ # seed.py, seed_regionais.py, seed_chat_demo.py, backfill_embeddings.py
 ├── templates/
-│   ├── base.html           # Header, footer, search bar
+│   ├── base.html           # Header, footer, search bar, chat widget
 │   ├── login.html          # Standalone login page
 │   ├── home.html           # Layer 1: search + topic cards
 │   ├── major_topic.html    # Layer 2
 │   ├── minor_topic.html    # Layer 3
-│   └── admin/             # Admin-only templates
-├── static/js/search.js     # Header live search
-├── media/uploads/          # Uploaded images & videos
+│   ├── regionais.html      # Special Layer 3 page for the region/territory/city map
+│   └── admin/              # Admin-only templates
+├── static/js/              # search.js, chat.js, admin_content_block.js (drag-and-drop)
+├── media/uploads/          # Uploaded images & videos (local dev only — R2 in production)
 ├── wiki_project/           # Django project settings
+├── render.yaml             # Render deploy config
+├── build.sh                # Render build script
 ├── .env                    # Credentials & config (not committed)
-└── db.sqlite3              # SQLite database
+└── db.sqlite3              # SQLite database (local dev only — Postgres in production)
 ```
