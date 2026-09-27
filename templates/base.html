@@ -66,6 +66,10 @@
       </div>
 
       <nav class="flex items-center gap-2 shrink-0">
+        <a href="{% url 'script_generator' %}"
+           class="text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-redhov transition whitespace-nowrap">
+          Gerador SA
+        </a>
         {% if user.is_authenticated and user.is_staff or user.is_authenticated and user.is_superuser %}
         <a href="{% url 'admin_dashboard' %}"
            class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">

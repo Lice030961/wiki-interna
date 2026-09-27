@@ -34,6 +34,7 @@ Admin user is created directly in the database. Password is managed via Django A
 | `/topico/<major_slug>/<minor_slug>/` | Minor topic page (Layer 3) |
 | `/busca/?q=<query>` | Search JSON API |
 | `/chat/` | Chatbot JSON API (RAG over wiki content) |
+| `/ferramentas/gerador-sa/` | Gerador de Script de SA (client-side only) |
 | `/admin-wiki/dashboard/` | Admin panel (admin only) |
 | `/django-admin/` | Django built-in admin |
 
@@ -59,6 +60,11 @@ Admins add blocks via `/admin-wiki/topico/<major>/<minor>/conteudo/`. Block type
 3. The regional hierarchy (`Regiao`/`Territorio`/`Cidade`) is matched separately via direct text matching, since it's structured data with no embedding.
 4. Matched blocks become context for the chat model, which answers only from that context and returns `{answer, sources}` (sources link back to the relevant topic pages).
 5. Keeps a short conversation history (last 3 turns, client-sent, server-trimmed).
+
+## Gerador de Script de SA
+`/ferramentas/gerador-sa/` monta o script de abertura de SA do Salesforce a partir do texto da ficha do cliente copiado do SIS (Ctrl+A, Ctrl+C, com o "Mostrar" dos Ativos aberto). O parser fica em `static/js/script_generator.js` e roda **só no navegador**: nada de dados de cliente vai ao servidor, e o código não chama nem referencia nenhum sistema interno (só procura rótulos no texto colado). Não adicionar integração direta com o SIS/NOC — os endpoints internos não podem aparecer neste repo público.
+
+Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mail"; o plano é o serviço aberto (linha antes de "Adicionais do Contrato", já que um ADM pode ter vários links); "Manter endereço do SIS" (marcado por padrão) pode ser desmarcado quando o SIS repete o mesmo endereço em todos os links; PPPoE `@desktop.com.br` é encurtado até o `@` (outros domínios ficam completos); endereço sempre `Rua, número - Bairro - Cidade/SP`; cliente dedicado → Ativo `-` e sem GPON; Mudança de ponto também não leva GPON.
 
 ## Seed command
 ```bash

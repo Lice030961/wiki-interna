@@ -101,6 +101,35 @@ def home(request):
     return render(request, 'home.html', {'major_topics': major_topics})
 
 
+# ── Ferramentas ───────────────────────────────────────────────────────────────
+
+def script_generator(request):
+    # Toda a extração roda no navegador (static/js/script_generator.js);
+    # o texto colado do SIS nunca chega ao servidor.
+    return render(request, 'tools/script_generator.html', {
+        'dedicado_options': [('nao', 'Não'), ('sim', 'Sim')],
+        'gpon_options': ['UP', 'DOWN'],
+        'tratativa_options': [
+            ('conexao', 'Conexão'),
+            ('navegacao', 'Navegação'),
+            ('oscilacao', 'Oscilação'),
+            ('mudanca', 'Mudança de ponto'),
+        ],
+        'obs_options': ['IGREJA', 'LIGAR ANTES DE IR AO LOCAL', 'REPASSE DE DROP', 'LOS VERMELHA'],
+        'fields': [
+            ('adm', 'ADM'),
+            ('pppoe', 'PPPoE'),
+            ('nome', 'Nome da Empresa'),
+            ('plano', 'Plano'),
+            ('ativo', 'Ativo do equipamento'),
+            ('tel', 'Tel'),
+            ('endereco', 'Endereço'),
+            ('horario', 'Horário de atendimento'),
+            ('responsavel', 'Responsável'),
+        ],
+    })
+
+
 # ── Search ────────────────────────────────────────────────────────────────────
 
 def search(request):
