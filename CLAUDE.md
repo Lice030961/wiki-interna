@@ -71,9 +71,10 @@ Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mai
 
 ## Seed command
 ```bash
-python manage.py seed
+python manage.py seed             # só o usuário admin (roda a cada deploy via build.sh)
+python manage.py seed --topicos    # + tópicos de demonstração (lista fixa em seed.py) — só em banco novo/local
 ```
-Creates the two users and initial topic structure from `topicos.txt`.
+O deploy **nunca** cria tópicos: o conteúdo de cada site (inclusive o da empresa, via `lice`) é criado pelo painel e vive só no banco. Push leva só código — por isso qualquer mudança que precise de dados tem que vir como migration, não como seed. `topicos.txt` é só referência, o código não lê.
 
 ## Theme / design
 Visual language follows `DESIGN.md` (Pinterest design system) **but with the Desktop palette** — never use Pinterest red `#e60023`.

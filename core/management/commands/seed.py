@@ -9,11 +9,19 @@ load_dotenv()
 
 
 class Command(BaseCommand):
-    help = 'Seed initial users and topics from topicos.txt structure'
+    help = 'Cria os usuários iniciais (e, com --topicos, a estrutura de tópicos de demonstração)'
 
-    def handle(self, *args, **kwargs):
+    def add_arguments(self, parser):
+        # Tópicos só com a flag: o build.sh roda este comando a cada deploy, e o
+        # conteúdo de cada site (inclusive o da empresa) é criado pelo painel —
+        # o deploy não pode criar nem ressuscitar tópicos no banco.
+        parser.add_argument('--topicos', action='store_true',
+                            help='Também cria os tópicos de demonstração (só em banco novo/local)')
+
+    def handle(self, *args, **options):
         self._create_users()
-        self._create_topics()
+        if options['topicos']:
+            self._create_topics()
         self.stdout.write(self.style.SUCCESS('Seed concluído com sucesso!'))
 
     def _create_users(self):
