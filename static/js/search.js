@@ -34,12 +34,12 @@ function fetchSearch(q, dropdown) {
     .then(r => r.json())
     .then(data => {
       if (!data.results.length) {
-        dropdown.innerHTML = '<p class="px-4 py-3 text-sm text-gray-400">Nenhum resultado encontrado.</p>';
+        dropdown.innerHTML = '<p class="px-4 py-3 text-sm text-mute">Nenhum resultado encontrado.</p>';
       } else {
         dropdown.innerHTML = data.results.map(r => `
-          <a href="${r.url}" class="flex flex-col px-4 py-3 hover:bg-yellow-50 border-b border-gray-100 last:border-0 transition">
-            <span class="font-semibold text-sm text-gray-900">${r.title}</span>
-            <span class="text-xs text-gray-400">${r.major}</span>
+          <a href="${r.url}" class="flex flex-col px-4 py-3 rounded-2xl hover:bg-card transition">
+            <span class="font-semibold text-sm text-ink">${r.title}</span>
+            <span class="text-xs text-mute">${r.major}</span>
           </a>`).join('');
       }
       dropdown.classList.remove('hidden');

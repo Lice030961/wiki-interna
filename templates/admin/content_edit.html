@@ -19,36 +19,34 @@
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 py-10">
 
-  <div class="mb-6 flex items-center gap-2 text-sm text-gray-400">
+  <div class="mb-6 flex items-center gap-2 text-sm text-mute">
     <a href="{% url 'admin_dashboard' %}" class="hover:text-brand-red transition">Painel</a>
     <span>/</span>
-    <span class="text-gray-700">{{ major.title }}</span>
+    <span class="text-body">{{ major.title }}</span>
     <span>/</span>
-    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+    <span class="text-body font-medium">{{ topic.title }}</span>
   </div>
 
   <div class="flex items-center justify-between mb-2">
-    <h1 class="text-2xl font-extrabold text-gray-900">Editar: {{ topic.title }}</h1>
+    <h1 class="text-[28px] font-bold text-ink tracking-[-1.2px]">Editar: {{ topic.title }}</h1>
     <a href="{% url 'minor_topic' major.slug topic.slug %}"
-       class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
+       class="border border-brand-red text-brand-red text-sm px-4 py-2 rounded-2xl hover:bg-brand-red/10 transition">
       Ver página
     </a>
   </div>
 
   {% if blocks %}
-  <p class="text-xs text-gray-400 mb-5 flex items-center gap-1.5">
+  <p class="text-xs text-mute mb-5 flex items-center gap-1.5">
     <span>↕</span> Arraste os blocos para reorganizar a ordem
   </p>
   {% endif %}
 
   <div id="blocks-container" class="space-y-3 mb-8">
     {% for block in blocks %}
-    <div class="block-item group relative border-2 border-gray-100 rounded-2xl overflow-hidden w-full
-                cursor-grab active:cursor-grabbing hover:border-brand-red hover:shadow-md
-                transition-all duration-150 select-none"
+    <div class="block-item group relative border-2 border-hairline rounded-2xl overflow-hidden w-full cursor-grab active:cursor-grabbing hover:border-brand-red hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition-all duration-150 select-none"
          data-block-id="{{ block.id }}">
       <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-red ring-offset-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150"></div>
-      <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
+      <div class="flex items-center gap-3 px-4 py-3 bg-card border-b border-hairline">
         <span class="text-lg flex-shrink-0">
           {% if block.block_type == 'text' %}📝
           {% elif block.block_type == 'checklist' %}✅
@@ -57,38 +55,38 @@
           {% elif block.block_type == 'link' %}🔗
           {% endif %}
         </span>
-        <span class="font-semibold text-sm text-gray-700 flex-1">
+        <span class="font-semibold text-sm text-body flex-1">
           {{ block.get_block_type_display }}{% if block.title %}: {{ block.title }}{% endif %}
         </span>
         <div class="flex gap-2 shrink-0">
           <a href="{% url 'admin_block_edit' block.id %}"
-             class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+             class="border border-hairline text-body text-xs px-3 py-1.5 rounded-2xl hover:bg-secondary transition">
             Editar
           </a>
           <form method="post" action="{% url 'admin_block_delete' block.id %}"
                 onsubmit="return confirm('Excluir este bloco?')">
             {% csrf_token %}
             <button type="submit"
-                    class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                    class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-red/10 transition">
               Excluir
             </button>
           </form>
         </div>
       </div>
-      <div class="px-4 py-3 text-sm text-gray-600 bg-white">
+      <div class="px-4 py-3 text-sm text-body bg-white">
         {% if block.block_type == 'text' or block.block_type == 'checklist' %}
         <p class="line-clamp-3 whitespace-pre-wrap text-xs">{{ block.content|truncatechars:200 }}</p>
         {% elif block.block_type == 'link' %}
         <p class="text-xs text-brand-red truncate">{{ block.content }}</p>
         {% elif block.file %}
-        <p class="text-xs text-gray-400">Arquivo: {{ block.file.name }}</p>
+        <p class="text-xs text-mute">Arquivo: {{ block.file.name }}</p>
         {% else %}
-        <p class="text-xs text-gray-300 italic">Sem conteúdo</p>
+        <p class="text-xs text-stone italic">Sem conteúdo</p>
         {% endif %}
       </div>
     </div>
     {% empty %}
-    <div class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+    <div class="text-center py-10 text-mute border-2 border-dashed border-hairline rounded-2xl">
       <p class="text-4xl mb-2">📭</p>
       <p class="text-sm">Nenhum bloco ainda. Adicione abaixo.</p>
     </div>
@@ -96,55 +94,54 @@
   </div>
 
   <div class="bg-white border-2 border-brand-yellow rounded-2xl p-6">
-    <h2 class="text-base font-bold text-gray-900 mb-5">Adicionar Bloco</h2>
+    <h2 class="text-base font-bold text-ink mb-5">Adicionar Bloco</h2>
     <form method="post" action="{% url 'admin_block_add' major.slug topic.slug %}" enctype="multipart/form-data" class="space-y-4">
       {% csrf_token %}
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {% for val, label in block_types %}
-        <label class="flex items-center gap-2 p-3 border-2 rounded-xl cursor-pointer transition
-                      has-[:checked]:border-brand-red has-[:checked]:bg-red-50 border-gray-200 hover:border-gray-300">
+        <label class="flex items-center gap-2 p-3 border-2 rounded-2xl cursor-pointer transition has-[:checked]:border-brand-red has-[:checked]:bg-brand-red/10 border-hairline hover:border-stone">
           <input type="radio" name="block_type" value="{{ val }}" {% if forloop.first %}checked{% endif %} class="accent-brand-red" />
           <span class="text-sm font-medium">{{ label }}</span>
         </label>
         {% endfor %}
       </div>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Título do bloco (opcional)</label>
+        <label class="block text-sm font-semibold text-body mb-1">Título do bloco (opcional)</label>
         <input type="text" name="title"
-               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+               class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
       </div>
       <div id="add-content-wrap">
-        <label id="add-content-label" class="block text-sm font-semibold text-gray-700 mb-1">Conteúdo / Legenda</label>
-        <div id="add-fmt-toolbar" class="flex items-center gap-1 border border-gray-300 border-b-0 rounded-t-lg px-2 py-1.5 bg-gray-50 flex-wrap">
+        <label id="add-content-label" class="block text-sm font-semibold text-body mb-1">Conteúdo / Legenda</label>
+        <div id="add-fmt-toolbar" class="flex items-center gap-1 border border-hairline border-b-0 rounded-t-2xl px-2 py-1.5 bg-card flex-wrap">
           <button type="button" onclick="fmt('content-textarea', 'bold')" class="fmt-btn font-bold" title="Negrito">B</button>
           <button type="button" onclick="fmt('content-textarea', 'italic')" class="fmt-btn italic" title="Itálico">I</button>
           <button type="button" onclick="fmt('content-textarea', 'underline')" class="fmt-btn underline" title="Sublinhado">U</button>
           <button type="button" onclick="fmt('content-textarea', 'strike')" class="fmt-btn line-through" title="Tachado">S</button>
-          <div class="w-px h-4 bg-gray-300 mx-1"></div>
+          <div class="w-px h-4 bg-stone mx-1"></div>
           <button type="button" onclick="fmt('content-textarea', 'code')" class="fmt-btn font-mono text-xs" title="Código">{ }</button>
-          <div class="w-px h-4 bg-gray-300 mx-1"></div>
+          <div class="w-px h-4 bg-stone mx-1"></div>
           <button type="button" onclick="insertTerm('content-textarea')"
-                  class="fmt-btn bg-red-50 text-brand-red border border-red-200 font-semibold text-xs px-2"
+                  class="fmt-btn bg-brand-red/10 text-brand-red border border-brand-red/30 font-semibold text-xs px-2"
                   title="Marcar termo do glossário">
             📖 Termo
           </button>
           <button type="button" onclick="insertAttention('content-textarea')"
-                  class="fmt-btn bg-red-50 text-brand-red border border-red-200 font-semibold text-xs px-2"
+                  class="fmt-btn bg-brand-red/10 text-brand-red border border-brand-red/30 font-semibold text-xs px-2"
                   title="Bloco de atenção">
             ⚠️ Atenção
           </button>
         </div>
         <textarea id="content-textarea" name="content" rows="6"
                   placeholder="Para texto: escreva o conteúdo. Para checklist: um item por linha."
-                  class="w-full border border-gray-300 rounded-b-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y font-mono"></textarea>
+                  class="w-full border border-hairline rounded-b-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow resize-y font-mono"></textarea>
       </div>
       <div id="add-file-wrap">
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Arquivo (imagem ou vídeo)</label>
+        <label class="block text-sm font-semibold text-body mb-1">Arquivo (imagem ou vídeo)</label>
         <input type="file" name="file" accept="image/*,video/*"
-               class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
+               class="w-full text-sm text-mute file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
       </div>
       <button type="submit"
-              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-2xl hover:bg-brand-redhov transition text-sm">
         Adicionar Bloco
       </button>
     </form>
@@ -155,31 +152,31 @@
 <!-- Modal de Termo -->
 <div id="term-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 opacity-0 pointer-events-none" style="transition: opacity 0.15s;">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-    <h3 class="text-base font-extrabold text-gray-900 mb-1">📖 Cadastrar Termo</h3>
-    <p class="text-xs text-gray-400 mb-4">O termo ficará em vermelho com tooltip na página.</p>
+    <h3 class="text-base font-bold text-ink mb-1">📖 Cadastrar Termo</h3>
+    <p class="text-xs text-mute mb-4">O termo ficará em vermelho com tooltip na página.</p>
     <div class="space-y-3">
       <div>
-        <label class="block text-xs font-semibold text-gray-700 mb-1">Termo</label>
+        <label class="block text-xs font-semibold text-body mb-1">Termo</label>
         <input id="modal-term-input" type="text" readonly
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 font-semibold text-brand-red" />
+               class="w-full border border-hairline rounded-2xl px-3 py-2 text-sm bg-card font-semibold text-brand-red" />
       </div>
       <div>
-        <label class="block text-xs font-semibold text-gray-700 mb-1">Definição</label>
+        <label class="block text-xs font-semibold text-body mb-1">Definição</label>
         <textarea id="modal-def-input" rows="3" placeholder="Explique o que significa este termo..."
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-none"></textarea>
+                  class="w-full border border-hairline rounded-2xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow resize-none"></textarea>
       </div>
-      <div id="existing-def-box" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
+      <div id="existing-def-box" class="hidden bg-brand-yellow/10 border border-brand-yellow/40 rounded-2xl px-3 py-2 text-xs text-ink">
         <span class="font-semibold">Definição atual:</span>
         <span id="existing-def-text"></span>
       </div>
     </div>
     <div class="flex gap-3 mt-5">
       <button onclick="saveTerm()"
-              class="flex-1 bg-brand-red text-white font-bold px-4 py-2 rounded-lg hover:bg-brand-redhov transition text-sm">
+              class="flex-1 bg-brand-red text-white font-bold px-4 py-2 rounded-2xl hover:bg-brand-redhov transition text-sm">
         Salvar
       </button>
       <button onclick="closeTermModal()"
-              class="flex-1 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition text-sm">
+              class="flex-1 border border-hairline text-body px-4 py-2 rounded-2xl hover:bg-card transition text-sm">
         Cancelar
       </button>
     </div>
@@ -188,7 +185,7 @@
 
 <!-- Toast -->
 <div id="reorder-toast"
-     class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+     class="fixed bottom-6 right-6 bg-ink text-white text-sm px-4 py-2.5 rounded-2xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
 </div>
 
 {% endblock %}
@@ -324,14 +321,8 @@ function updateAddForm(type) {
   if (textarea) {
     textarea.placeholder = cfg.placeholder;
     // textarea sem toolbar: remover arredondamento topo
-    textarea.className = textarea.className
-      .replace('rounded-b-lg', '')
-      .replace('border border-gray-300', '');
-    if (cfg.toolbar) {
-      textarea.classList.add('border', 'border-gray-300', 'rounded-b-lg');
-    } else {
-      textarea.classList.add('border', 'border-gray-300', 'rounded-lg');
-    }
+    textarea.classList.remove('rounded-b-2xl', 'rounded-2xl');
+    textarea.classList.add('border', 'border-hairline', cfg.toolbar ? 'rounded-b-2xl' : 'rounded-2xl');
   }
 }
 

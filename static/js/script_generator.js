@@ -222,7 +222,7 @@
   function clearAll() {
     ['f-adm', 'f-sis', 'f-obs'].forEach((id) => { $(id).value = ''; });
     $('f-adm').dataset.auto = '1';
-    $('f-horario').value = 'Administrativo';
+    $('f-horario').value = '';
     document.querySelectorAll('input[name="tratativa"], input[name="gpon"], input[name="obs"]').forEach((r) => { r.checked = false; });
     document.querySelector('input[name="dedicado"][value="nao"]').checked = true;
     $('keep-endereco').checked = true;

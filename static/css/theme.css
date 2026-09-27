@@ -1,0 +1,132 @@
+/* Tema da Wiki — linguagem visual do DESIGN.md (Pinterest) com a paleta da Desktop.
+   Cores de marca: vermelho #AC2407, amarelo #EFBC00. Neutros creme do DESIGN.md. */
+
+:root {
+  --brand-red: #AC2407;
+  --brand-red-pressed: #8f1d06;
+  --brand-yellow: #EFBC00;
+  --ink: #000000;
+  --body: #33332e;
+  --mute: #62625b;
+  --surface-card: #f6f6f3;
+  --hairline: #dadad3;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 76px;
+}
+
+body { font-family: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, Arial, sans-serif; }
+
+/* ── Barra lateral ─────────────────────────────────────────────────────────── */
+/* Desktop: fechada mostra só os ícones; com o mouse em cima abre por cima do
+   conteúdo (o conteúdo não se move). Os nomes ficam cortados pelo overflow. */
+
+#sidebar { width: var(--sidebar-w-collapsed); transition: width 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease; }
+#app-main { margin-left: var(--sidebar-w-collapsed); }
+
+#sidebar .sb-label, #sidebar .sb-logo-full { opacity: 0; transition: opacity 0.15s ease; }
+
+@media (min-width: 768px) {
+  #sidebar:hover, #sidebar:has(:focus-visible) {
+    width: var(--sidebar-w);
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.18);
+  }
+  #sidebar:hover .sb-label, #sidebar:hover .sb-logo-full,
+  #sidebar:has(:focus-visible) .sb-label, #sidebar:has(:focus-visible) .sb-logo-full { opacity: 1; }
+  /* Submenu de Ferramentas só aparece com a barra aberta. */
+  #sidebar:not(:hover):not(:has(:focus-visible)) #tools-menu { display: none; }
+}
+
+/* Celular: a barra vira gaveta por cima do conteúdo, sempre com os nomes. */
+@media (max-width: 767px) {
+  #sidebar { width: var(--sidebar-w); transform: translateX(-100%); }
+  #app-main { margin-left: 0; }
+  .sb-open #sidebar { transform: translateX(0); }
+  #sidebar .sb-label, #sidebar .sb-logo-full { opacity: 1; }
+}
+
+/* ── Glossário ─────────────────────────────────────────────────────────────── */
+
+.glossary-term {
+  color: var(--brand-red);
+  font-weight: 600;
+  cursor: help;
+  position: relative;
+  display: inline;
+  text-decoration: underline dotted var(--brand-yellow);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.glossary-term::after {
+  content: attr(data-def);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--brand-red);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-bottom: 3px solid var(--brand-yellow);
+  white-space: pre-wrap;
+  width: max-content;
+  max-width: 260px;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.glossary-term::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--brand-yellow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 101;
+}
+.glossary-term:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.glossary-term:hover::before { opacity: 1; }
+
+/* ── Bloco [ATENÇÃO] ───────────────────────────────────────────────────────── */
+
+.attention-box {
+  background: #fdf4f1;
+  border-left: 4px solid var(--brand-red);
+  border-radius: 0 16px 16px 0;
+  padding: 12px 16px;
+  margin: 8px 0;
+}
+.attention-label {
+  display: block;
+  font-weight: 700;
+  color: var(--brand-red);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* ── Chat ──────────────────────────────────────────────────────────────────── */
+
+.typing-dots { display: flex; align-items: center; gap: 4px; }
+.typing-dots span {
+  width: 6px; height: 6px; border-radius: 9999px;
+  background: #91918c;
+  animation: typing-blink 1.4s infinite both;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-blink {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+.search-dropdown { max-height: 360px; }

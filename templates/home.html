@@ -3,42 +3,47 @@
 {% block title %}Início{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-16">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
 
-  <!-- Hero search -->
-  <div class="text-center mb-8">
-    <img src="{% static 'images/logo.jpg' %}" alt="Logo" class="h-16 w-auto object-contain mx-auto mb-5" />
-    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Wiki Interna</h1>
-    <p class="text-gray-500 text-base">Encontre tutoriais, fluxos e informações da equipe</p>
+  <!-- Hero -->
+  <div class="mb-12 sm:mb-14 pt-4 max-w-3xl">
+    <span class="block w-14 h-1.5 rounded-full bg-brand-yellow mb-5"></span>
+    <h1 class="text-3xl sm:text-[44px] font-bold text-ink leading-[1.15] tracking-[-0.8px]">
+      Encontre <span class="text-brand-red">tutoriais</span>, <span class="text-brand-red">ferramentas</span>
+      e <span class="text-brand-red">informações</span> da equipe
+    </h1>
   </div>
 
-  <!-- Topic cards grid -->
+  <!-- Tópicos -->
   <section>
-    <h2 class="text-sm font-bold uppercase tracking-widest text-brand-red mb-5">Tópicos Principais</h2>
+    <h2 class="text-[28px] font-bold text-ink tracking-[-1.2px] mb-6">Tópicos</h2>
     {% if major_topics %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for topic in major_topics %}
       <a href="{% url 'major_topic' topic.slug %}"
-         class="group flex items-start gap-4 p-5 border-2 border-gray-100 rounded-2xl hover:border-brand-yellow hover:shadow-md transition bg-white">
-        <div class="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center text-white text-2xl shrink-0 group-hover:bg-brand-yellow transition">
+         class="group flex flex-col gap-4 p-5 rounded-2xl bg-white border-2 border-brand-red hover:border-brand-yellow
+                hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition min-h-[168px]">
+        <div class="w-12 h-12 border-2 border-brand-red group-hover:border-brand-yellow transition rounded-full flex items-center justify-center text-2xl shrink-0">
           {{ topic.icon|default:"📁" }}
         </div>
-        <div class="min-w-0">
-          <p class="font-bold text-gray-900 group-hover:text-brand-red transition">{{ topic.title }}</p>
+        <div class="min-w-0 flex-1">
+          <p class="text-lg font-semibold text-ink leading-snug group-hover:text-brand-red transition">{{ topic.title }}</p>
           {% if topic.description %}
-          <p class="text-gray-500 text-sm mt-0.5 line-clamp-2">{{ topic.description }}</p>
+          <p class="text-body/80 text-sm mt-1 line-clamp-2">{{ topic.description }}</p>
           {% endif %}
-          <p class="text-xs text-gray-400 mt-1">{{ topic.minor_topics.count }} sub-tópico{{ topic.minor_topics.count|pluralize:"s" }}</p>
         </div>
+        <span class="self-start text-xs font-bold px-3 py-1.5 rounded-full bg-brand-red text-white">
+          {{ topic.minor_topics.count }} sub-tópico{{ topic.minor_topics.count|pluralize:"s" }}
+        </span>
       </a>
       {% endfor %}
     </div>
     {% else %}
-    <div class="text-center py-16 text-gray-400">
+    <div class="text-center py-16 bg-brand-yellow/20 rounded-[32px]">
       <p class="text-5xl mb-3">📭</p>
-      <p class="text-sm">Nenhum tópico cadastrado ainda.</p>
+      <p class="text-sm text-mute">Nenhum tópico cadastrado ainda.</p>
       {% if user.is_staff or user.is_superuser %}
-      <a href="{% url 'admin_dashboard' %}" class="mt-4 inline-block text-brand-red font-semibold text-sm underline">Criar tópicos no painel admin</a>
+      <a href="{% url 'admin_dashboard' %}" class="mt-5 inline-flex items-center h-10 px-4 rounded-2xl bg-brand-red text-white font-bold text-sm hover:bg-brand-redhov transition">Criar tópicos no painel admin</a>
       {% endif %}
     </div>
     {% endif %}

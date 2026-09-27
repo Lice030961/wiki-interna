@@ -4,64 +4,71 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpg' %}" />
   <title>Login — Wiki Interna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
           colors: {
-            brand: { red: '#AC2407', redhov: '#8f1d06', yellow: '#EFBC00', yellhov: '#d4a800' }
+            brand: { red: '#AC2407', redhov: '#8f1d06', yellow: '#EFBC00', yellhov: '#d4a800' },
+            ink: '#000000', body: '#33332e', mute: '#62625b', ash: '#91918c', hairline: '#dadad3', card: '#f6f6f3',
           }
         }
       }
     }
   </script>
 </head>
-<body class="bg-brand-red min-h-screen flex items-center justify-center p-4">
+<body class="bg-brand-red min-h-screen flex items-center justify-center p-4 antialiased">
   <div class="w-full max-w-sm">
 
-    <!-- Logo card -->
-    <div class="text-center mb-8">
-      <img src="{% static 'images/logo.jpg' %}" alt="Logo" class="h-20 w-auto object-contain mx-auto mb-4 drop-shadow-lg" />
-      <h1 class="text-white text-2xl font-bold tracking-wide">Acesso Administrativo</h1>
-      <p class="text-white/60 text-sm mt-1">Área restrita — somente administradores</p>
-    </div>
+    <div class="bg-white rounded-[32px] p-8 shadow-[0_0_16px_rgba(0,0,0,0.12)]">
+      <div class="flex flex-col items-center text-center mb-7">
+        <img src="{% static 'images/logo.jpg' %}" alt="Desktop" class="h-16 w-16 rounded-2xl object-cover mb-4" />
+        <h1 class="text-[22px] font-semibold text-ink leading-tight">Acesso Administrativo</h1>
+        <p class="text-mute text-sm mt-1">Área restrita — somente administradores</p>
+      </div>
 
-    <!-- Form -->
-    <div class="bg-white rounded-2xl shadow-2xl p-8">
       {% if error %}
-      <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+      <div class="mb-5 px-4 py-3 bg-brand-red/10 text-brand-red font-semibold rounded-2xl text-sm">
         {{ error }}
       </div>
       {% endif %}
 
-      <form method="post" class="space-y-5">
+      <form method="post" class="space-y-4">
         {% csrf_token %}
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Usuário</label>
+          <label for="username" class="block text-sm font-semibold text-ink mb-1.5">Usuário</label>
           <input
-            type="text" name="username" required autofocus
-            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent"
+            id="username" type="text" name="username" required autofocus
+            class="w-full h-11 px-4 rounded-2xl border border-ash text-ink placeholder-ash focus:outline-none focus:border-transparent focus:ring-2 focus:ring-brand-yellow transition"
             placeholder="Digite seu usuário"
           />
         </div>
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Senha</label>
+          <label for="password" class="block text-sm font-semibold text-ink mb-1.5">Senha</label>
           <input
-            type="password" name="password" required
-            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent"
+            id="password" type="password" name="password" required
+            class="w-full h-11 px-4 rounded-2xl border border-ash text-ink placeholder-ash focus:outline-none focus:border-transparent focus:ring-2 focus:ring-brand-yellow transition"
             placeholder="Digite sua senha"
           />
         </div>
         <button
           type="submit"
-          class="w-full bg-brand-red text-white font-bold py-3 rounded-lg hover:bg-brand-redhov transition text-sm tracking-wide">
+          class="w-full h-11 mt-2 bg-brand-red text-white font-bold rounded-2xl hover:bg-brand-redhov transition text-sm">
           Entrar
         </button>
       </form>
     </div>
 
+    <a href="{% url 'home' %}" class="block text-center text-white/80 hover:text-white text-sm font-semibold mt-6 transition">
+      ← Voltar para a wiki
+    </a>
   </div>
 </body>
 </html>

@@ -23,24 +23,24 @@
        class="text-sm text-brand-red hover:underline">&larr; Voltar</a>
   </div>
 
-  <h1 class="text-2xl font-extrabold text-gray-900 mb-8">Editar Bloco</h1>
+  <h1 class="text-[28px] font-bold text-ink mb-8 tracking-[-1.2px]">Editar Bloco</h1>
 
-  <form method="post" enctype="multipart/form-data" class="space-y-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+  <form method="post" enctype="multipart/form-data" class="space-y-5 bg-white border border-hairline rounded-2xl p-6">
     {% csrf_token %}
 
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo</label>
-      <p class="text-sm text-gray-500">{{ content_block.get_block_type_display }}</p>
+      <label class="block text-sm font-semibold text-body mb-1">Tipo</label>
+      <p class="text-sm text-mute">{{ content_block.get_block_type_display }}</p>
     </div>
 
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-1">Título do bloco</label>
+      <label class="block text-sm font-semibold text-body mb-1">Título do bloco</label>
       <input type="text" name="title" value="{{ content_block.title }}"
-             class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red" />
+             class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
     </div>
 
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-1">
+      <label class="block text-sm font-semibold text-body mb-1">
         {% if content_block.block_type == 'link' %}URL
         {% elif content_block.block_type == 'checklist' %}Itens
         {% elif content_block.block_type == 'image' or content_block.block_type == 'video' %}Legenda
@@ -48,48 +48,48 @@
       </label>
 
       <!-- Barra de formatação -->
-      <div class="flex items-center gap-1 border border-gray-300 border-b-0 rounded-t-lg px-2 py-1.5 bg-gray-50 flex-wrap">
+      <div class="flex items-center gap-1 border border-hairline border-b-0 rounded-t-2xl px-2 py-1.5 bg-card flex-wrap">
         <button type="button" onclick="fmt('edit-textarea', 'bold')" class="fmt-btn font-bold" title="Negrito">B</button>
         <button type="button" onclick="fmt('edit-textarea', 'italic')" class="fmt-btn italic" title="Itálico">I</button>
         <button type="button" onclick="fmt('edit-textarea', 'underline')" class="fmt-btn underline" title="Sublinhado">U</button>
         <button type="button" onclick="fmt('edit-textarea', 'strike')" class="fmt-btn line-through" title="Tachado">S</button>
-        <div class="w-px h-4 bg-gray-300 mx-1"></div>
+        <div class="w-px h-4 bg-stone mx-1"></div>
         <button type="button" onclick="fmt('edit-textarea', 'code')" class="fmt-btn font-mono text-xs" title="Código">{ }</button>
-        <div class="w-px h-4 bg-gray-300 mx-1"></div>
+        <div class="w-px h-4 bg-stone mx-1"></div>
         <button type="button" onclick="insertTerm('edit-textarea')"
-                class="fmt-btn bg-red-50 text-brand-red border border-red-200 font-semibold text-xs px-2"
+                class="fmt-btn bg-brand-red/10 text-brand-red border border-brand-red/30 font-semibold text-xs px-2"
                 title="Marcar termo do glossário">
           📖 Termo
         </button>
         <button type="button" onclick="insertAttention('edit-textarea')"
-                class="fmt-btn bg-red-50 text-brand-red border border-red-200 font-semibold text-xs px-2"
+                class="fmt-btn bg-brand-red/10 text-brand-red border border-brand-red/30 font-semibold text-xs px-2"
                 title="Bloco de atenção">
           ⚠️ Atenção
         </button>
       </div>
 
       <textarea id="edit-textarea" name="content" rows="6"
-                class="w-full border border-gray-300 rounded-b-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-y font-mono">{{ content_block.content }}</textarea>
+                class="w-full border border-hairline rounded-b-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow resize-y font-mono">{{ content_block.content }}</textarea>
     </div>
 
     {% if content_block.block_type == 'image' or content_block.block_type == 'video' %}
     <div>
       {% if content_block.file %}
-      <p class="text-xs text-gray-400 mb-2">Arquivo atual: {{ content_block.file.name }}</p>
+      <p class="text-xs text-mute mb-2">Arquivo atual: {{ content_block.file.name }}</p>
       {% endif %}
-      <label class="block text-sm font-semibold text-gray-700 mb-1">Substituir arquivo</label>
+      <label class="block text-sm font-semibold text-body mb-1">Substituir arquivo</label>
       <input type="file" name="file" accept="image/*,video/*"
-             class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
+             class="w-full text-sm text-mute file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
     </div>
     {% endif %}
 
     <div class="flex gap-3 pt-2">
       <button type="submit"
-              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-lg hover:bg-brand-redhov transition text-sm">
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-2xl hover:bg-brand-redhov transition text-sm">
         Salvar
       </button>
       <a href="{% url 'admin_content_edit' content_block.minor_topic.major_topic.slug content_block.minor_topic.slug %}"
-         class="border border-gray-300 text-gray-600 px-6 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
+         class="border border-hairline text-body px-6 py-2.5 rounded-2xl hover:bg-card transition text-sm font-medium">
         Cancelar
       </a>
     </div>
@@ -99,31 +99,31 @@
 <!-- Modal de Termo -->
 <div id="term-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 opacity-0 pointer-events-none" style="transition: opacity 0.15s;">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-    <h3 class="text-base font-extrabold text-gray-900 mb-1">📖 Cadastrar Termo</h3>
-    <p class="text-xs text-gray-400 mb-4">O termo ficará em vermelho com tooltip na página.</p>
+    <h3 class="text-base font-bold text-ink mb-1">📖 Cadastrar Termo</h3>
+    <p class="text-xs text-mute mb-4">O termo ficará em vermelho com tooltip na página.</p>
     <div class="space-y-3">
       <div>
-        <label class="block text-xs font-semibold text-gray-700 mb-1">Termo</label>
+        <label class="block text-xs font-semibold text-body mb-1">Termo</label>
         <input id="modal-term-input" type="text" readonly
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 font-semibold text-brand-red" />
+               class="w-full border border-hairline rounded-2xl px-3 py-2 text-sm bg-card font-semibold text-brand-red" />
       </div>
       <div>
-        <label class="block text-xs font-semibold text-gray-700 mb-1">Definição</label>
+        <label class="block text-xs font-semibold text-body mb-1">Definição</label>
         <textarea id="modal-def-input" rows="3" placeholder="Explique o que significa este termo..."
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red resize-none"></textarea>
+                  class="w-full border border-hairline rounded-2xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow resize-none"></textarea>
       </div>
-      <div id="existing-def-box" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
+      <div id="existing-def-box" class="hidden bg-brand-yellow/10 border border-brand-yellow/40 rounded-2xl px-3 py-2 text-xs text-ink">
         <span class="font-semibold">Definição atual:</span>
         <span id="existing-def-text"></span>
       </div>
     </div>
     <div class="flex gap-3 mt-5">
       <button onclick="saveTerm()"
-              class="flex-1 bg-brand-red text-white font-bold px-4 py-2 rounded-lg hover:bg-brand-redhov transition text-sm">
+              class="flex-1 bg-brand-red text-white font-bold px-4 py-2 rounded-2xl hover:bg-brand-redhov transition text-sm">
         Salvar
       </button>
       <button onclick="closeTermModal()"
-              class="flex-1 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition text-sm">
+              class="flex-1 border border-hairline text-body px-4 py-2 rounded-2xl hover:bg-card transition text-sm">
         Cancelar
       </button>
     </div>
@@ -132,7 +132,7 @@
 
 <!-- Toast -->
 <div id="toast"
-     class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+     class="fixed bottom-6 right-6 bg-ink text-white text-sm px-4 py-2.5 rounded-2xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
 </div>
 
 <!-- Dados do glossário -->

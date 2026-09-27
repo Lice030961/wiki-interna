@@ -22,16 +22,16 @@ function getCsrfToken() {
 function addMessage(text, from, sources) {
   const bubble = document.createElement('div');
   bubble.className = from === 'user'
-    ? 'ml-auto bg-brand-yellow/20 text-gray-900 rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-wrap'
-    : 'bg-gray-100 text-gray-900 rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-wrap';
+    ? 'ml-auto bg-brand-yellow text-ink font-medium rounded-2xl px-4 py-2.5 max-w-[85%] w-fit whitespace-pre-wrap'
+    : 'bg-brand-red/10 text-ink rounded-2xl px-4 py-2.5 max-w-[85%] w-fit whitespace-pre-wrap';
   bubble.textContent = text;
   chatMessages.appendChild(bubble);
 
   if (sources && sources.length) {
     const links = document.createElement('div');
-    links.className = 'flex flex-col gap-1 max-w-[85%]';
+    links.className = 'flex flex-wrap gap-1.5 max-w-[85%]';
     links.innerHTML = sources.map(s =>
-      `<a href="${s.url}" class="text-xs text-brand-red hover:underline">🔗 ${s.title}</a>`
+      `<a href="${s.url}" class="inline-flex items-center bg-white border border-brand-red/30 text-brand-red text-xs font-bold px-3 py-1.5 rounded-full hover:bg-brand-red hover:text-white transition">${s.title}</a>`
     ).join('');
     chatMessages.appendChild(links);
   }
@@ -42,7 +42,7 @@ function addMessage(text, from, sources) {
 function addTyping() {
   const bubble = document.createElement('div');
   bubble.id = 'chat-typing';
-  bubble.className = 'bg-gray-100 rounded-lg px-3 py-2 w-fit typing-dots';
+  bubble.className = 'bg-brand-red/10 rounded-2xl px-4 py-3 w-fit typing-dots';
   bubble.innerHTML = '<span></span><span></span><span></span>';
   chatMessages.appendChild(bubble);
   chatMessages.scrollTop = chatMessages.scrollHeight;

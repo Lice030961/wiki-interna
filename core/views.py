@@ -11,6 +11,7 @@ from django.db.models import Q
 
 from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade
 from . import chatbot
+from .tools import search_tools
 
 
 def is_admin(user):
@@ -137,6 +138,10 @@ def search(request):
     results = []
     if q:
         seen = set()
+
+        for tool in search_tools(q):
+            seen.add(tool['url'])
+            results.append({'title': tool['name'], 'major': 'Ferramentas', 'url': tool['url']})
 
         minor_topics = MinorTopic.objects.filter(
             Q(title__icontains=q) | Q(description__icontains=q)

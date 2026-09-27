@@ -61,6 +61,9 @@ Admins add blocks via `/admin-wiki/topico/<major>/<minor>/conteudo/`. Block type
 4. Matched blocks become context for the chat model, which answers only from that context and returns `{answer, sources}` (sources link back to the relevant topic pages).
 5. Keeps a short conversation history (last 3 turns, client-sent, server-trimmed).
 
+## Ferramentas (registro em `core/tools.py`)
+Ferramentas não são tópicos nem têm `ContentBlock`, então tudo sobre elas vem da lista `TOOLS` em `core/tools.py` (nome, `url_name`, descrição, palavras-chave). Esse registro alimenta: o menu "Ferramentas" da barra lateral (context processor `tools_context`), a busca do header (`search_tools`, resultados com rótulo "Ferramentas") e o chatbot (`_tools_context` em `chatbot.py`, casamento léxico pelo nome/palavras-chave; "ferramenta(s)" traz todas; a ferramenta vira fonte com link). **Nova ferramenta:** criar view + URL e adicionar uma entrada em `TOOLS` — nada mais.
+
 ## Gerador de Script de SA
 `/ferramentas/gerador-sa/` monta o script de abertura de SA do Salesforce a partir do texto da ficha do cliente copiado do SIS (Ctrl+A, Ctrl+C, com o "Mostrar" dos Ativos aberto). O parser fica em `static/js/script_generator.js` e roda **só no navegador**: nada de dados de cliente vai ao servidor, e o código não chama nem referencia nenhum sistema interno (só procura rótulos no texto colado). Não adicionar integração direta com o SIS/NOC — os endpoints internos não podem aparecer neste repo público.
 
@@ -72,11 +75,44 @@ python manage.py seed
 ```
 Creates the two users and initial topic structure from `topicos.txt`.
 
-## Theme colors
-Defined in Tailwind config inside each template:
-- `brand-red`: `#C8102E`
-- `brand-yellow`: `#FFD100`
-- Background: white (`#ffffff`)
+## Theme / design
+Visual language follows `DESIGN.md` (Pinterest design system) **but with the Desktop palette** — never use Pinterest red `#e60023`.
+- Brand (Tailwind config in `templates/base.html`): `brand-red` `#AC2407` (hover `brand-redhov` `#8f1d06`), `brand-yellow` `#EFBC00` (hover `brand-yellhov` `#d4a800`)
+- Neutrals from DESIGN.md: `ink`, `body`, `mute`, `ash`, `hairline`, `card` (`#f6f6f3`), `secondary` (`#e5e5e0`), etc.
+- Font Inter (substitute for Pin Sans); radii only 16px (`rounded-2xl`), 32px (`rounded-[32px]`) and pill (`rounded-full`); no card shadows
+- Shared CSS in `static/css/theme.css`: collapsible sidebar, glossary tooltips (red + yellow, Desktop palette), `[ATENÇÃO]` box, chat typing dots
+- Layout: red left sidebar, icons-only by default and expanding over the content on hover (logo → Home, Início, Ferramentas group, Assistente/chat; bottom: Painel Admin for admins, Entrar/Sair); drawer on mobile. Search bar stays in the white top bar (1px `ash` divider, same gray as the topic card borders). No footer.
+
+## Revamp de design — EM ANDAMENTO (primeira parte já publicada)
+
+**Estado atual (27/09/2026):** a primeira parte do revamp (itens abaixo) foi commitada na branch `revamp`, mergeada na `main` e enviada para `origin` e `lice` — o Render publica a partir da `main`. O que está em "Falta fazer" continua pendente.
+
+**Já feito (na branch `revamp`):**
+- `base.html`: barra lateral vermelha (só ícones, abre no hover por cima do conteúdo; gaveta no celular), grupo "Ferramentas" que abre/fecha (Gerador de Script SA), "Assistente" abre o chat, Painel Admin + Entrar/Sair no rodapé da barra; header branco com linha `ash` e busca em pílula; sem footer; fonte Inter; tokens de cor no Tailwind config
+- `static/css/theme.css`: CSS global (barra lateral, tooltips do glossário em vermelho/amarelo, caixa `[ATENÇÃO]`, chat) — o CSS do glossário saiu de `minor_topic.html`
+- Home: frase "Encontre **tutoriais**, **ferramentas** e **informações** da equipe" (palavras em vermelho, traço amarelo acima), tópicos em blocos brancos com borda vermelha Desktop (`brand-red`) que fica amarela no hover (sombra neutra bem leve só no hover), contorno do emoji `brand-red`, etiquetas de sub-tópicos em vermelho
+- Chat: cabeçalho vermelho com faixa amarela, mensagens do usuário em amarelo, do assistente em vermelho claro, fontes como pílulas
+- Login e as 11 telas de `templates/admin/` convertidas para o novo padrão (cantos 16px, neutros do DESIGN.md, foco amarelo, texto escuro sobre amarelo)
+- Ferramentas: registro único em `core/tools.py` (barra lateral, busca do header e chatbot); Assistente indica o caminho no menu em vez de escrever links
+- Gerador SA: instrução encurtada; "Administrativo" virou placeholder cinza (continua sendo o valor padrão no script); aviso amarelo logo abaixo dos botões Copiar/Limpar: "Lembre-se de sempre conferir o Script e adicionar Notas na SA!"
+
+**Preferências de design do usuário (já validadas):**
+- Paleta da Desktop sempre (vermelho `#AC2407`, amarelo `#EFBC00`), nada do vermelho do Pinterest
+- Não exagerar em cores diferentes: blocos brancos, bordas vermelho Desktop (`brand-red`), amarelo como destaque de hover, vermelho para etiquetas/destaques
+- Sem painéis/seções redundantes (ex.: ferramentas ficam só na barra lateral, não na Home)
+- Textos curtos: nada de explicação técnica que não ajuda quem usa a ferramenta
+
+**Falta fazer:**
+- Conteúdo interno das páginas de tópico (`major_topic.html`), sub-tópico (`minor_topic.html`) e regionais (`regionais.html`) — já usam a barra/header novos, mas blocos e botões ainda estão no estilo antigo
+- Revisar o visual interno do Gerador SA para o padrão novo
+- Aguardar novas ideias do usuário antes de continuar
+- Próximas entregas: mesmo fluxo — commit na `revamp`, merge na `main` e push (`origin` = `giovaniolivr/wiki-desktop`; depois `lice` = `Lice030961/wiki-interna`)
+
+**Observações:**
+- `DESIGN.md` (raiz) é o design system do Pinterest, gerado com `npx getdesign@latest add pinterest` (Node.js LTS instalado via winget)
+- Em dev, o navegador pode usar `chat.js`/`theme.css` antigos do cache — Ctrl+F5 (em produção o WhiteNoise versiona os arquivos)
+- O sub-tópico "Localizar Cliente" mostra o mapa de regionais porque está marcado `is_territory_map` no banco — não é bug do revamp
+- O git local usa o e-mail `giovaniolivr@gmail.com` (commits antigos, até `b73cb8b`, saíram com `gibinha.jesus@gmail.com`)
 
 ## Pendências conhecidas
 

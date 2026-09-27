@@ -10,7 +10,6 @@
     <h1 class="text-2xl font-extrabold text-gray-900">Gerador de Script de SA</h1>
     <p class="text-sm text-gray-500 mt-1">
       No SIS, abra a ficha do cliente, clique em <strong>Mostrar</strong> nos Ativos, dê Ctrl+A, Ctrl+C e cole abaixo.
-      Tudo é processado no seu navegador — nada é enviado ou salvo.
     </p>
   </div>
 
@@ -91,7 +90,7 @@
               {% endif %}
             </div>
             <input id="f-{{ id }}" type="text" autocomplete="off"
-                   {% if id == 'horario' %}value="Administrativo"{% endif %}
+                   {% if id == 'horario' %}placeholder="Administrativo"{% endif %}
                    {% if id == 'responsavel' %}placeholder="Quem estiver no local"{% endif %}
                    {% if id == 'adm' %}inputmode="numeric" data-auto="1"{% endif %}
                    class="sg-input w-full px-3 py-1.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow disabled:bg-gray-100 disabled:text-gray-400" />
@@ -118,6 +117,10 @@
                 class="bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm px-4 py-2.5 rounded-lg hover:border-brand-yellow transition">
           Limpar
         </button>
+      </div>
+      <div class="flex items-center gap-3 mt-3 px-4 py-3 rounded-2xl bg-brand-yellow text-ink text-sm font-bold">
+        <span class="text-lg leading-none">⚠️</span>
+        Lembre-se de sempre conferir o Script e adicionar Notas na SA!
       </div>
     </section>
   </div>

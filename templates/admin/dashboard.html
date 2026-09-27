@@ -6,23 +6,23 @@
 
   <div class="flex items-center justify-between mb-8">
     <div>
-      <h1 class="text-2xl font-extrabold text-gray-900">Painel Admin</h1>
-      <p class="text-gray-500 text-sm mt-0.5">Gerencie tópicos e conteúdo da wiki</p>
+      <h1 class="text-[28px] font-bold text-ink tracking-[-1.2px]">Painel Admin</h1>
+      <p class="text-mute text-sm mt-0.5">Gerencie tópicos e conteúdo da wiki</p>
     </div>
     <div class="flex items-center gap-3">
       <a href="{% url 'admin_glossary' %}"
-         class="border border-brand-yellow text-brand-yellow font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-yellow-50 transition">
+         class="border border-brand-yellow text-ink font-bold text-sm px-5 py-2.5 rounded-2xl hover:bg-brand-yellow/10 transition">
         📖 Glossário
       </a>
       <a href="{% url 'admin_major_topic_create' %}"
-         class="bg-brand-red text-white font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-brand-redhov transition">
+         class="bg-brand-red text-white font-bold text-sm px-5 py-2.5 rounded-2xl hover:bg-brand-redhov transition">
         + Novo Tópico Principal
       </a>
     </div>
   </div>
 
   {% if major_topics %}
-  <p class="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
+  <p class="text-xs text-mute mb-3 flex items-center gap-1.5">
     <span>↕</span> Arraste os tópicos para reorganizar a ordem
   </p>
   {% endif %}
@@ -30,9 +30,7 @@
   {% if major_topics %}
   <div id="major-topics-container" class="space-y-4">
     {% for major in major_topics %}
-    <div class="major-topic-item group/major relative border-2 border-gray-100 rounded-2xl overflow-hidden
-                transition-all duration-150 hover:border-brand-red hover:shadow-md
-                cursor-grab active:cursor-grabbing select-none"
+    <div class="major-topic-item group/major relative border-2 border-hairline rounded-2xl overflow-hidden transition-all duration-150 hover:border-brand-red hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] cursor-grab active:cursor-grabbing select-none"
          data-major-id="{{ major.id }}"
          data-major-slug="{{ major.slug }}">
 
@@ -40,32 +38,32 @@
       <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-red ring-offset-1 opacity-0 group-hover/major:opacity-100 pointer-events-none transition-opacity duration-150"></div>
 
       <!-- Major topic row -->
-      <div class="flex items-center gap-3 p-4 bg-gray-50">
+      <div class="flex items-center gap-3 p-4 bg-card">
         <span class="text-xl">{{ major.icon|default:"📁" }}</span>
         <div class="flex-1 min-w-0">
-          <p class="font-bold text-gray-900">{{ major.title }}</p>
+          <p class="font-bold text-ink">{{ major.title }}</p>
           {% if major.description %}
-          <p class="text-xs text-gray-400 mt-0.5 truncate">{{ major.description }}</p>
+          <p class="text-xs text-mute mt-0.5 truncate">{{ major.description }}</p>
           {% endif %}
         </div>
         <div class="flex gap-2 shrink-0">
           <a href="{% url 'admin_minor_topic_create' major.slug %}"
-             class="bg-brand-yellow text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition">
+             class="bg-brand-yellow text-ink font-semibold text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-yellhov transition">
             + Sub-tópico
           </a>
           <a href="{% url 'admin_major_topic_edit' major.slug %}"
-             class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+             class="border border-hairline text-body text-xs px-3 py-1.5 rounded-2xl hover:bg-secondary transition">
             Editar
           </a>
           <a href="{% url 'major_topic' major.slug %}"
-             class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+             class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-red/10 transition">
             Ver
           </a>
           <form method="post" action="{% url 'admin_major_topic_delete' major.slug %}"
                 onsubmit="return confirm('Excluir este tópico e todos os sub-tópicos?')">
             {% csrf_token %}
             <button type="submit"
-                    class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                    class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-red/10 transition">
               Excluir
             </button>
           </form>
@@ -74,38 +72,36 @@
 
       <!-- Minor topics -->
       {% if major.minor_topics.all %}
-      <div class="minor-topics-container divide-y divide-gray-100" data-major-slug="{{ major.slug }}">
+      <div class="minor-topics-container divide-y divide-hairline" data-major-slug="{{ major.slug }}">
         {% for minor in major.minor_topics.all %}
-        <div class="minor-topic-item group/minor relative flex items-center gap-3 px-4 py-3 pl-10 bg-white
-                    transition-all duration-150 hover:bg-red-50 hover:border-l-4 hover:border-brand-red
-                    cursor-grab active:cursor-grabbing select-none"
+        <div class="minor-topic-item group/minor relative flex items-center gap-3 px-4 py-3 pl-10 bg-white transition-all duration-150 hover:bg-brand-red/10 hover:border-l-4 hover:border-brand-red cursor-grab active:cursor-grabbing select-none"
              data-minor-id="{{ minor.id }}">
 
           <span class="text-base flex-shrink-0">{{ minor.icon|default:"📄" }}</span>
           <div class="flex-1 min-w-0">
-            <p class="font-medium text-gray-800 text-sm">{{ minor.title }}</p>
+            <p class="font-medium text-ink text-sm">{{ minor.title }}</p>
             {% if minor.description %}
-            <p class="text-xs text-gray-400 truncate">{{ minor.description }}</p>
+            <p class="text-xs text-mute truncate">{{ minor.description }}</p>
             {% endif %}
           </div>
           <div class="flex gap-2 shrink-0">
             <a href="{% url 'admin_content_edit' major.slug minor.slug %}"
-               class="bg-brand-red text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-brand-redhov transition">
+               class="bg-brand-red text-white font-semibold text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-redhov transition">
               Conteúdo
             </a>
             <a href="{% url 'admin_minor_topic_edit' major.slug minor.slug %}"
-               class="border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 transition">
+               class="border border-hairline text-body text-xs px-3 py-1.5 rounded-2xl hover:bg-secondary transition">
               Editar
             </a>
             <a href="{% url 'minor_topic' major.slug minor.slug %}"
-               class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+               class="border border-brand-red text-brand-red text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-red/10 transition">
               Ver
             </a>
             <form method="post" action="{% url 'admin_minor_topic_delete' major.slug minor.slug %}"
                   onsubmit="return confirm('Excluir este sub-tópico?')">
               {% csrf_token %}
               <button type="submit"
-                      class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                      class="border border-red-300 text-red-500 text-xs px-3 py-1.5 rounded-2xl hover:bg-brand-red/10 transition">
                 Excluir
               </button>
             </form>
@@ -114,16 +110,16 @@
         {% endfor %}
       </div>
       {% else %}
-      <p class="px-10 py-3 text-xs text-gray-400 italic">Nenhum sub-tópico. Clique em "+ Sub-tópico" para criar.</p>
+      <p class="px-10 py-3 text-xs text-mute italic">Nenhum sub-tópico. Clique em "+ Sub-tópico" para criar.</p>
       {% endif %}
 
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div class="text-center py-20 text-gray-400">
+  <div class="text-center py-20 text-mute">
     <p class="text-6xl mb-4">📭</p>
-    <p class="font-semibold text-gray-600">Nenhum tópico criado ainda.</p>
+    <p class="font-semibold text-body">Nenhum tópico criado ainda.</p>
     <p class="text-sm mt-1">Clique em "+ Novo Tópico Principal" para começar.</p>
   </div>
   {% endif %}
@@ -132,7 +128,7 @@
 
 <!-- Toast -->
 <div id="reorder-toast"
-     class="fixed bottom-6 right-6 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
+     class="fixed bottom-6 right-6 bg-ink text-white text-sm px-4 py-2.5 rounded-2xl shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">
   ✓ Ordem salva
 </div>
 
@@ -194,7 +190,7 @@ document.querySelectorAll('.minor-topics-container').forEach(container => {
   Sortable.create(container, {
     animation: 200,
     ghostClass: 'opacity-30',
-    chosenClass: 'bg-red-50',
+    chosenClass: 'bg-brand-red/10',
     dragClass: 'shadow-xl',
     filter: 'a, button, form',
     preventOnFilter: false,

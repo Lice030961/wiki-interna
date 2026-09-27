@@ -32,6 +32,11 @@ SYSTEM_PROMPT = (
     'citaria uma informação em texto.\n\n'
     '- Cite cada tópico da wiki no máximo uma vez ao longo da resposta — não repita o nome do mesmo tópico '
     'várias vezes, os links pra cada tópico citado já aparecem separadamente abaixo da resposta.\n\n'
+    '- O contexto pode trazer Ferramentas da wiki (páginas que fazem uma tarefa, ex. gerar um script). '
+    'Se uma ferramenta resolver o que o usuário quer, diga em 1 frase o que ela faz e como chegar nela '
+    '(o caminho no menu, ex.: "no menu lateral, em Ferramentas > Gerador de Script SA").\n\n'
+    '- NUNCA escreva links, URLs, endereços de página (ex. /ferramentas/...) nem frases tipo "Clique aqui" — '
+    'os botões pros tópicos e ferramentas citados já aparecem sozinhos abaixo da resposta.\n\n'
     'Se a resposta não estiver no contexto, diga que não encontrou isso na wiki e sugira usar a busca.\n\n'
     'Contexto:\n{context}'
 )
@@ -301,7 +306,24 @@ def search_relevant_blocks(query, history=None, max_topics=3):
     return selected
 
 
-def generate_answer(query, blocks, regional_text=None, history=None):
+def _tools_context(query, history=None):
+    """Ferramentas (core/tools.py) ligadas à pergunta. Não são ContentBlock, então
+    não têm embedding — casamento léxico pelo nome/palavras-chave, igual regionais."""
+    from core.tools import tools_for_question
+
+    retrieval_text = ' '.join(_recent_user_messages(history or []) + [query])
+    tools = tools_for_question(_concept_words(retrieval_text))
+    if not tools:
+        return None, []
+    # Sem a URL no contexto: o modelo tendia a copiá-la na resposta. O link vai só nas fontes.
+    text = '\n'.join(
+        f'Ferramenta "{t["name"]}" (menu lateral > Ferramentas > {t["name"]}): {t["description"]}'
+        for t in tools
+    )
+    return text, [{'title': t['name'], 'url': t['url']} for t in tools]
+
+
+def generate_answer(query, blocks, regional_text=None, history=None, tools_text=None):
     # Agrupa por tópico (1 cabeçalho por tópico, mesmo com vários blocos) — do
     # contrário o mesmo nome de tópico aparece repetido várias vezes no contexto
     # e o modelo tende a repeti-lo de volta na resposta.
@@ -320,6 +342,8 @@ def generate_answer(query, blocks, regional_text=None, history=None):
     ]
     if regional_text:
         context_parts.append(f'[Regionais: cidades, territórios e regiões de atendimento]\n{regional_text}')
+    if tools_text:
+        context_parts.append(f'[Ferramentas da wiki]\n{tools_text}')
 
     context = '\n\n'.join(context_parts)
     messages = [{'role': 'system', 'content': SYSTEM_PROMPT.format(context=context)}]
@@ -330,24 +354,55 @@ def generate_answer(query, blocks, regional_text=None, history=None):
         'messages': messages,
         'max_tokens': 700,
     })
-    return result['response'].strip()
+    return _strip_links(result['response'])
+
+
+_MD_LINK = re.compile(r'\[([^\]]+)\]\([^)]*\)')
+_CLICK_HERE_LINE = re.compile(r'^\s*\[?\s*clique aqui.*$', re.IGNORECASE | re.MULTILINE)
+# Não engole a pontuação final da frase ("... em /ferramentas/gerador-sa/.").
+_PATH = re.compile(r'\s*\(?(?:https?://|/(?:ferramentas|topico|wiki)/)[^\s)]*?(?=[.,;:!?]?(?:\s|\)|$))\)?')
+
+
+def _strip_links(text):
+    """Rede de segurança caso o modelo ignore o prompt e escreva links: as fontes
+    já viram botões no chat, então link no texto só repete (e às vezes é inventado).
+    Link de ferramenta vira o caminho no menu ("Ferramentas > Nome"), pra frase
+    continuar fazendo sentido; os demais somem."""
+    from core.tools import all_tools
+
+    tool_paths = {t['url']: f'Ferramentas > {t["name"]}' for t in all_tools()}
+
+    def replace_path(m):
+        path = m.group(0).strip().strip('()')
+        return f' {tool_paths[path]}' if path in tool_paths else ''
+
+    text = _CLICK_HERE_LINE.sub('', text)
+    text = _MD_LINK.sub(r'\1', text)
+    text = _PATH.sub(replace_path, text)
+    text = re.sub(r'[ \t]+([.,;:])', r'\1', text)
+    return re.sub(r'\n{3,}', '\n\n', text).strip()
 
 
 def answer_question(query, history=None):
     history = _clean_history(history)
     blocks = search_relevant_blocks(query, history=history)
     regional_text, regional_source = _regional_context(query)
+    tools_text, tool_sources = _tools_context(query, history=history)
 
-    if not blocks and not regional_text:
+    if not blocks and not regional_text and not tools_text:
         return {
             'answer': 'Não encontrei nada na wiki sobre isso. Tenta reformular ou usar a busca no topo da página.',
             'sources': [],
         }
 
-    answer = generate_answer(query, blocks, regional_text, history=history)
+    answer = generate_answer(query, blocks, regional_text, history=history, tools_text=tools_text)
 
     sources = []
     seen_urls = set()
+    # Ferramenta primeiro: quando bate, costuma ser o que o usuário quer usar.
+    for t in tool_sources:
+        seen_urls.add(t['url'])
+        sources.append(t)
     for b in blocks:
         url = f'/topico/{b.minor_topic.major_topic.slug}/{b.minor_topic.slug}/'
         if url not in seen_urls:

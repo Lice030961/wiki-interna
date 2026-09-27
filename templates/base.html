@@ -6,136 +6,204 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpg' %}" />
   <title>{% block title %}Wiki{% endblock %} — Wiki Interna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
           colors: {
             brand: {
               red:    '#AC2407',
               redhov: '#8f1d06',
               yellow: '#EFBC00',
               yellhov:'#d4a800',
-            }
+            },
+            // Neutros creme do DESIGN.md
+            ink:       '#000000',
+            body:      '#33332e',
+            mute:      '#62625b',
+            ash:       '#91918c',
+            stone:     '#c8c8c1',
+            hairline:  '#dadad3',
+            soft:      '#fbfbf9',
+            card:      '#f6f6f3',
+            secondary: '#e5e5e0',
+            pressed:   '#c8c8c1',
           }
         }
       }
     }
   </script>
-  <style>
-    .search-dropdown { max-height: 320px; }
-    .typing-dots { display: flex; align-items: center; gap: 4px; }
-    .typing-dots span {
-      width: 6px;
-      height: 6px;
-      border-radius: 9999px;
-      background: #9ca3af;
-      animation: typing-blink 1.4s infinite both;
-    }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing-blink {
-      0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
-      40% { opacity: 1; transform: scale(1); }
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}" />
   {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-white text-gray-900 min-h-screen flex flex-col">
+{% with url_name=request.resolver_match.url_name %}
+<body class="bg-white text-body antialiased">
 
-  <header class="bg-brand-red shadow-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+  <!-- Barra lateral -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 bg-brand-red text-white flex flex-col overflow-hidden whitespace-nowrap">
+    <a href="{% url 'home' %}" class="h-16 px-[18px] flex items-center gap-3 shrink-0" title="Início">
+      <img src="{% static 'images/logo.jpg' %}" alt="Desktop" class="sb-logo-mark h-10 w-10 rounded-2xl object-cover shrink-0 ring-2 ring-white/25" />
+      <span class="sb-logo-full font-extrabold tracking-tight text-lg">Wiki Interna</span>
+    </a>
 
-      <a href="{% url 'home' %}" class="flex items-center gap-2 shrink-0">
-        <img src="{% static 'images/logo.jpg' %}" alt="Logo" class="h-10 w-auto object-contain" />
-        <span class="text-white font-bold text-lg hidden sm:block tracking-wide">Wiki Interna</span>
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-1">
+      <a href="{% url 'home' %}" data-label="Início"
+         class="sb-item flex items-center gap-3 h-12 px-[14px] rounded-2xl font-semibold text-sm transition
+                {% if url_name == 'home' or url_name == 'major_topic' or url_name == 'minor_topic' %}bg-brand-yellow text-ink{% else %}hover:bg-white/10{% endif %}">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>
+        <span class="sb-label">Início</span>
       </a>
 
-      <div class="flex-1 relative">
+      <!-- Ferramentas: grupo que abre/fecha -->
+      <div>
+        <button id="tools-toggle" type="button" data-label="Ferramentas"
+                aria-expanded="{% if url_name in wiki_tool_url_names %}true{% else %}false{% endif %}"
+                class="sb-item w-full flex items-center gap-3 h-12 px-[14px] rounded-2xl font-semibold text-sm hover:bg-white/10 transition">
+          <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6Z"/></svg>
+          <span class="sb-label flex-1 text-left">Ferramentas</span>
+          <svg id="tools-chevron" class="sb-label w-4 h-4 shrink-0 transition-transform {% if url_name in wiki_tool_url_names %}rotate-180{% endif %}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div id="tools-menu" class="{% if url_name not in wiki_tool_url_names %}hidden{% endif %} mt-1 ml-6 pl-3 border-l-2 border-white/25 space-y-1">
+          {% for tool in wiki_tools %}
+          <a href="{{ tool.url }}"
+             class="flex items-center h-10 px-3 rounded-2xl text-sm font-semibold transition
+                    {% if url_name == tool.url_name %}bg-brand-yellow text-ink{% else %}text-white/85 hover:bg-white/10 hover:text-white{% endif %}">
+            {{ tool.name }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button id="chat-toggle" type="button" data-label="Assistente"
+              class="sb-item w-full flex items-center gap-3 h-12 px-[14px] rounded-2xl font-semibold text-sm hover:bg-white/10 transition">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 7 2.5-3.5H19a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10.5a2 2 0 0 0 1 1.73V21Z"/></svg>
+        <span class="sb-label">Assistente</span>
+      </button>
+
+    </nav>
+
+    <div class="px-3 py-3 border-t border-white/15 space-y-1 shrink-0">
+      {% if user.is_authenticated and user.is_staff or user.is_authenticated and user.is_superuser %}
+      <a href="{% url 'admin_dashboard' %}" data-label="Painel Admin"
+         class="sb-item flex items-center gap-3 h-12 px-[14px] rounded-2xl font-semibold text-sm transition
+                {% if url_name and 'admin_' in url_name %}bg-brand-yellow text-ink{% else %}hover:bg-white/10{% endif %}">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4"/></svg>
+        <span class="sb-label">Painel Admin</span>
+      </a>
+      {% endif %}
+      {% if user.is_authenticated %}
+      <a href="{% url 'logout' %}" data-label="Sair"
+         class="sb-item flex items-center gap-3 h-12 px-[14px] rounded-2xl font-semibold text-sm hover:bg-white/10 transition">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17l5-5-5-5m5 5H9m4 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8"/></svg>
+        <span class="sb-label">Sair</span>
+      </a>
+      {% else %}
+      <a href="{% url 'login' %}" data-label="Entrar como Admin"
+         class="sb-item flex items-center gap-3 h-12 px-[14px] rounded-2xl font-semibold text-sm hover:bg-white/10 transition">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7l-5 5 5 5m-5-5h11m-4-9h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8"/></svg>
+        <span class="sb-label">Entrar como Admin</span>
+      </a>
+      {% endif %}
+    </div>
+  </aside>
+  <div id="sb-scrim" class="fixed inset-0 z-30 bg-black/50 hidden"></div>
+
+  <div id="app-main" class="min-h-screen flex flex-col">
+
+    <!-- Topo: pesquisa -->
+    <header class="sticky top-0 z-20 bg-white border-b border-ash h-16 flex items-center gap-3 px-4">
+      <button id="sb-open" type="button" aria-label="Abrir menu"
+              class="md:hidden w-10 h-10 rounded-full bg-card hover:bg-secondary flex items-center justify-center text-ink shrink-0 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="relative flex-1 max-w-3xl mx-auto">
+        <svg class="w-5 h-5 text-mute absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
         <input
           id="search-input"
           type="text"
           placeholder="Pesquisar tópicos..."
           autocomplete="off"
-          class="w-full px-4 py-2 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+          class="w-full h-11 pl-12 pr-4 rounded-full bg-card text-ink placeholder-ash border-2 border-transparent focus:bg-white focus:border-brand-yellow focus:outline-none transition"
         />
         <div id="search-dropdown"
-             class="search-dropdown hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-y-auto z-50">
+             class="search-dropdown hidden absolute top-full left-0 right-0 mt-2 bg-white border border-hairline rounded-2xl overflow-y-auto z-50 p-2">
         </div>
       </div>
+    </header>
 
-      <nav class="flex items-center gap-2 shrink-0">
-        <a href="{% url 'script_generator' %}"
-           class="text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-redhov transition whitespace-nowrap">
-          Gerador SA
-        </a>
-        {% if user.is_authenticated and user.is_staff or user.is_authenticated and user.is_superuser %}
-        <a href="{% url 'admin_dashboard' %}"
-           class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">
-          Painel Admin
-        </a>
-        <a href="{% url 'logout' %}"
-           class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">
-          Sair
-        </a>
-        {% else %}
-        <a href="{% url 'login' %}"
-           class="bg-brand-yellow text-white font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-brand-yellhov transition whitespace-nowrap">
-          Entrar como Admin
-        </a>
-        {% endif %}
-      </nav>
-    </div>
-  </header>
-
-  {% if messages %}
-  <div class="max-w-7xl mx-auto px-4 mt-4 w-full">
-    {% for message in messages %}
-    <div class="mb-2 px-4 py-3 rounded-lg text-sm font-medium
-      {% if message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
-      {{ message }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <main class="flex-1">
-    {% block content %}{% endblock %}
-  </main>
-
-  <footer class="bg-brand-red mt-8">
-    <div class="max-w-7xl mx-auto px-4 py-4 text-center text-white/60 text-xs">
-      Wiki Interna — Uso restrito à equipe
-    </div>
-  </footer>
-
-  <div id="chat-widget" class="fixed bottom-4 right-4 z-50 flex flex-col items-end">
-    <div id="chat-panel"
-         class="hidden mb-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] h-96 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden">
-      <div class="bg-brand-red text-white text-sm font-bold px-4 py-3 flex items-center justify-between">
-        <span>Assistente da Wiki</span>
-        <button id="chat-close" class="text-white/80 hover:text-white text-lg leading-none">&times;</button>
+    {% if messages %}
+    <div class="max-w-5xl mx-auto px-4 mt-4 w-full">
+      {% for message in messages %}
+      <div class="mb-2 px-4 py-3 rounded-2xl text-sm font-semibold
+        {% if message.tags == 'error' %}bg-red-50 text-brand-red{% else %}bg-green-50 text-green-900{% endif %}">
+        {{ message }}
       </div>
-      <div id="chat-messages" class="flex-1 overflow-y-auto px-3 py-3 space-y-3 text-sm"></div>
-      <form id="chat-form" class="border-t border-gray-100 flex items-center gap-2 p-2">
-        {% csrf_token %}
-        <input id="chat-input" type="text" placeholder="Pergunte algo sobre a wiki..." autocomplete="off"
-               class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
-        <button type="submit"
-                class="bg-brand-yellow text-white font-bold text-sm px-3 py-2 rounded-lg hover:bg-brand-yellhov transition">
-          Enviar
-        </button>
-      </form>
+      {% endfor %}
     </div>
-    <button id="chat-toggle"
-            class="bg-brand-red text-white rounded-full w-14 h-14 shadow-xl flex items-center justify-center text-2xl hover:bg-brand-redhov transition">
-      💬
-    </button>
+    {% endif %}
+
+    <main class="flex-1">
+      {% block content %}{% endblock %}
+    </main>
+
   </div>
 
+  <!-- Assistente (aberto pelo item "Assistente" da barra lateral) -->
+  <div id="chat-panel"
+       class="hidden fixed bottom-4 right-4 z-50 w-80 sm:w-96 max-w-[calc(100vw-2rem)] h-[28rem] bg-white border border-hairline rounded-[32px] shadow-[0_0_16px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden">
+    <div class="bg-brand-red text-white px-5 py-4 flex items-center justify-between border-b-4 border-brand-yellow">
+      <span class="flex items-center gap-2 font-bold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 7 2.5-3.5H19a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10.5a2 2 0 0 0 1 1.73V21Z"/></svg>
+        Assistente da Wiki
+      </span>
+      <button id="chat-close" type="button" aria-label="Fechar"
+              class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-lg leading-none transition">&times;</button>
+    </div>
+    <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 text-sm bg-soft"></div>
+    <form id="chat-form" class="border-t border-hairline flex items-center gap-2 p-3">
+      {% csrf_token %}
+      <input id="chat-input" type="text" placeholder="Pergunte algo sobre a wiki..." autocomplete="off"
+             class="flex-1 h-11 px-4 rounded-full bg-card text-sm text-ink placeholder-ash border border-transparent focus:bg-white focus:border-ash focus:outline-none transition" />
+      <button type="submit"
+              class="h-11 px-4 rounded-2xl bg-brand-red text-white font-bold text-sm hover:bg-brand-redhov transition">
+        Enviar
+      </button>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const scrim = document.getElementById('sb-scrim');
+
+      // Ferramentas: grupo que abre/fecha
+      const toolsToggle = document.getElementById('tools-toggle');
+      const toolsMenu = document.getElementById('tools-menu');
+      function setToolsOpen(open) {
+        toolsMenu.classList.toggle('hidden', !open);
+        document.getElementById('tools-chevron').classList.toggle('rotate-180', open);
+        toolsToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      toolsToggle.addEventListener('click', () => setToolsOpen(toolsMenu.classList.contains('hidden')));
+
+      // Celular: gaveta
+      function closeDrawer() { root.classList.remove('sb-open'); scrim.classList.add('hidden'); }
+      document.getElementById('sb-open').addEventListener('click', () => {
+        root.classList.add('sb-open');
+        scrim.classList.remove('hidden');
+      });
+      scrim.addEventListener('click', closeDrawer);
+      document.getElementById('chat-toggle').addEventListener('click', closeDrawer);
+    })();
+  </script>
   <script src="{% static 'js/search.js' %}"></script>
   <script src="{% static 'js/chat.js' %}"></script>
   {% block extra_js %}{% endblock %}
 </body>
+{% endwith %}
 </html>
