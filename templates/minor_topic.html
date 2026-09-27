@@ -19,8 +19,7 @@
     max-width: 98vw;
     max-height: 98vh;
     object-fit: contain;
-    border-radius: 12px;
-    box-shadow: 0 8px 64px rgba(0,0,0,0.6);
+    border-radius: 16px;
   }
   #lightbox-close {
     position: fixed;
@@ -38,102 +37,102 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-10">
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
 
-  <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6 flex-wrap">
+  <nav class="flex items-center gap-2 text-sm text-mute mb-6 flex-wrap">
     <a href="{% url 'home' %}" class="hover:text-brand-red transition">Início</a>
     <span>/</span>
     <a href="{% url 'major_topic' major.slug %}" class="hover:text-brand-red transition">{{ major.title }}</a>
     <span>/</span>
-    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+    <span class="text-body font-medium">{{ topic.title }}</span>
   </nav>
 
-  <div class="flex items-start gap-4 mb-8">
-    <div class="w-12 h-12 bg-brand-yellow rounded-xl flex items-center justify-center text-white text-2xl shrink-0">
+  <div class="flex flex-wrap items-center gap-4 mb-8">
+    <div class="w-12 h-12 border-2 border-brand-red rounded-full flex items-center justify-center text-2xl shrink-0">
       {{ topic.icon|default:"📄" }}
     </div>
     <div class="flex-1 min-w-0">
-      <h1 class="text-2xl font-extrabold text-gray-900">{{ topic.title }}</h1>
+      <h1 class="text-[28px] font-bold text-ink tracking-[-1.2px] leading-tight">{{ topic.title }}</h1>
       {% if topic.description %}
-      <p class="text-gray-500 text-sm mt-0.5">{{ topic.description }}</p>
+      <p class="text-body/80 text-sm mt-1">{{ topic.description }}</p>
       {% endif %}
     </div>
     {% if user.is_staff or user.is_superuser %}
     <a href="{% url 'admin_content_edit' major.slug topic.slug %}"
-       class="shrink-0 bg-brand-red text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-brand-redhov transition">
-      Editar Conteúdo
+       class="shrink-0 inline-flex items-center h-10 px-4 rounded-2xl bg-brand-red text-white font-bold text-sm hover:bg-brand-redhov transition">
+      Editar conteúdo
     </a>
     {% endif %}
   </div>
 
-  <div class="space-y-6">
+  <div class="space-y-5">
     {% for block in blocks %}
 
     {% if block.block_type == 'text' %}
-    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+    <div class="bg-white border-2 border-brand-red rounded-2xl p-6">
       {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
-      <div class="prose prose-sm max-w-none text-gray-700">{{ block.rendered_content }}</div>
+      <div class="max-w-none text-sm text-body leading-relaxed">{{ block.rendered_content }}</div>
     </div>
 
     {% elif block.block_type == 'checklist' %}
-    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+    <div class="bg-white border-2 border-brand-red rounded-2xl p-6">
       {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
-      <div class="space-y-2">
+      <div class="space-y-2.5">
         {% for line in block.checklist_lines %}
         <label class="flex items-start gap-3 cursor-pointer group">
-          <input type="checkbox" class="mt-0.5 w-4 h-4 accent-brand-red rounded" />
-          <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ line }}</span>
+          <input type="checkbox" class="peer mt-0.5 w-4 h-4 accent-brand-red shrink-0" />
+          <span class="text-sm text-body group-hover:text-ink peer-checked:line-through peer-checked:text-mute transition">{{ line }}</span>
         </label>
         {% endfor %}
       </div>
     </div>
 
     {% elif block.block_type == 'image' %}
-    <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
+    <div class="bg-white border-2 border-brand-red rounded-2xl p-4">
+      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3 px-2 pt-1">{{ block.title }}</h2>{% endif %}
       {% if block.file %}
       <img src="{{ block.file.url }}" alt="{{ block.title }}"
-           class="rounded-xl max-w-full h-auto cursor-zoom-in lb-trigger" />
+           class="rounded-2xl max-w-full h-auto cursor-zoom-in lb-trigger" />
       {% endif %}
-      {% if block.content %}<p class="text-xs text-gray-400 mt-2">{{ block.content }}</p>{% endif %}
+      {% if block.content %}<p class="text-xs text-mute mt-2 px-2">{{ block.content }}</p>{% endif %}
     </div>
 
     {% elif block.block_type == 'video' %}
-    <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3">{{ block.title }}</h2>{% endif %}
+    <div class="bg-white border-2 border-brand-red rounded-2xl p-4">
+      {% if block.title %}<h2 class="text-lg font-bold text-brand-red mb-3 px-2 pt-1">{{ block.title }}</h2>{% endif %}
       {% if block.file %}
-      <video controls class="rounded-xl w-full max-h-96">
+      <video controls class="rounded-2xl w-full max-h-96 bg-ink">
         <source src="{{ block.file.url }}" />
         Seu navegador não suporta vídeo.
       </video>
       {% endif %}
-      {% if block.content %}<p class="text-xs text-gray-400 mt-2">{{ block.content }}</p>{% endif %}
+      {% if block.content %}<p class="text-xs text-mute mt-2 px-2">{{ block.content }}</p>{% endif %}
     </div>
 
     {% elif block.block_type == 'link' %}
     <a href="{{ block.content }}" target="_blank" rel="noopener noreferrer"
-       class="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:border-brand-red hover:shadow-md transition-all group">
-      <div class="w-10 h-10 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-brand-red/20 transition-colors">
+       class="group flex items-center gap-4 bg-white border-2 border-brand-red rounded-2xl p-5 hover:border-brand-yellow hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition">
+      <div class="w-11 h-11 border-2 border-brand-red group-hover:border-brand-yellow rounded-full flex items-center justify-center shrink-0 transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-brand-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
         </svg>
       </div>
       <div class="flex-1 min-w-0">
-        <p class="font-bold text-gray-800 group-hover:text-brand-red transition-colors">{{ block.title|default:block.content }}</p>
-        <p class="text-xs text-gray-400 truncate mt-0.5">{{ block.content }}</p>
+        <p class="font-semibold text-ink group-hover:text-brand-red transition">{{ block.title|default:block.content }}</p>
+        <p class="text-xs text-mute truncate mt-0.5">{{ block.content }}</p>
       </div>
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-300 group-hover:text-brand-red transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-ash group-hover:text-brand-red transition shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
       </svg>
     </a>
     {% endif %}
 
     {% empty %}
-    <div class="text-center py-16 text-gray-400">
+    <div class="text-center py-16 bg-brand-yellow/20 rounded-[32px]">
       <p class="text-5xl mb-3">📝</p>
-      <p class="text-sm">Nenhum conteúdo ainda.</p>
+      <p class="text-sm text-mute">Nenhum conteúdo ainda.</p>
       {% if user.is_staff or user.is_superuser %}
-      <a href="{% url 'admin_content_edit' major.slug topic.slug %}" class="mt-4 inline-block text-brand-red font-semibold text-sm underline">Adicionar conteúdo</a>
+      <a href="{% url 'admin_content_edit' major.slug topic.slug %}" class="mt-5 inline-flex items-center h-10 px-4 rounded-2xl bg-brand-red text-white font-bold text-sm hover:bg-brand-redhov transition">Adicionar conteúdo</a>
       {% endif %}
     </div>
     {% endfor %}

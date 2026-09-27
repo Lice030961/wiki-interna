@@ -6,13 +6,13 @@
   .fmt-btn {
     padding: 2px 8px;
     font-size: 0.875rem;
-    color: #4b5563;
-    border-radius: 4px;
+    color: #33332e;
+    border-radius: 9999px;
     cursor: pointer;
     user-select: none;
     transition: background 0.1s;
   }
-  .fmt-btn:hover { background: #e5e7eb; }
+  .fmt-btn:hover { background: #e5e5e0; }
 </style>
 {% endblock %}
 
@@ -43,9 +43,9 @@
 
   <div id="blocks-container" class="space-y-3 mb-8">
     {% for block in blocks %}
-    <div class="block-item group relative border-2 border-hairline rounded-2xl overflow-hidden w-full cursor-grab active:cursor-grabbing hover:border-brand-red hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition-all duration-150 select-none"
+    <div class="block-item group relative border-2 border-brand-red rounded-2xl overflow-hidden w-full cursor-grab active:cursor-grabbing hover:border-brand-yellow hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition-all duration-150 select-none"
          data-block-id="{{ block.id }}">
-      <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-red ring-offset-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150"></div>
+      <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-yellow ring-offset-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150"></div>
       <div class="flex items-center gap-3 px-4 py-3 bg-card border-b border-hairline">
         <span class="text-lg flex-shrink-0">
           {% if block.block_type == 'text' %}📝
@@ -138,7 +138,7 @@
       <div id="add-file-wrap">
         <label class="block text-sm font-semibold text-body mb-1">Arquivo (imagem ou vídeo)</label>
         <input type="file" name="file" accept="image/*,video/*"
-               class="w-full text-sm text-mute file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
+               class="w-full text-sm text-mute file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-brand-yellow file:text-ink file:font-semibold hover:file:bg-brand-yellhov" />
       </div>
       <button type="submit"
               class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-2xl hover:bg-brand-redhov transition text-sm">

@@ -30,12 +30,12 @@
   {% if major_topics %}
   <div id="major-topics-container" class="space-y-4">
     {% for major in major_topics %}
-    <div class="major-topic-item group/major relative border-2 border-hairline rounded-2xl overflow-hidden transition-all duration-150 hover:border-brand-red hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] cursor-grab active:cursor-grabbing select-none"
+    <div class="major-topic-item group/major relative border-2 border-brand-red rounded-2xl overflow-hidden transition-all duration-150 hover:border-brand-yellow hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] cursor-grab active:cursor-grabbing select-none"
          data-major-id="{{ major.id }}"
          data-major-slug="{{ major.slug }}">
 
       <!-- Hover ring major -->
-      <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-red ring-offset-1 opacity-0 group-hover/major:opacity-100 pointer-events-none transition-opacity duration-150"></div>
+      <div class="absolute inset-0 rounded-2xl ring-2 ring-brand-yellow ring-offset-1 opacity-0 group-hover/major:opacity-100 pointer-events-none transition-opacity duration-150"></div>
 
       <!-- Major topic row -->
       <div class="flex items-center gap-3 p-4 bg-card">

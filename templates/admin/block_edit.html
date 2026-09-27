@@ -6,13 +6,13 @@
   .fmt-btn {
     padding: 2px 8px;
     font-size: 0.875rem;
-    color: #4b5563;
-    border-radius: 4px;
+    color: #33332e;
+    border-radius: 9999px;
     cursor: pointer;
     user-select: none;
     transition: background 0.1s;
   }
-  .fmt-btn:hover { background: #e5e7eb; }
+  .fmt-btn:hover { background: #e5e5e0; }
 </style>
 {% endblock %}
 
@@ -25,7 +25,7 @@
 
   <h1 class="text-[28px] font-bold text-ink mb-8 tracking-[-1.2px]">Editar Bloco</h1>
 
-  <form method="post" enctype="multipart/form-data" class="space-y-5 bg-white border border-hairline rounded-2xl p-6">
+  <form method="post" enctype="multipart/form-data" class="space-y-5 bg-white border-2 border-brand-red rounded-2xl p-6">
     {% csrf_token %}
 
     <div>
@@ -79,7 +79,7 @@
       {% endif %}
       <label class="block text-sm font-semibold text-body mb-1">Substituir arquivo</label>
       <input type="file" name="file" accept="image/*,video/*"
-             class="w-full text-sm text-mute file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-yellow file:text-white file:font-semibold hover:file:bg-brand-yellhov" />
+             class="w-full text-sm text-mute file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-brand-yellow file:text-ink file:font-semibold hover:file:bg-brand-yellhov" />
     </div>
     {% endif %}
 

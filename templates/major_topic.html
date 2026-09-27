@@ -2,64 +2,65 @@
 {% block title %}{{ topic.title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-10">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
 
   <!-- Breadcrumb -->
-  <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+  <nav class="flex items-center gap-2 text-sm text-mute mb-6 flex-wrap">
     <a href="{% url 'home' %}" class="hover:text-brand-red transition">Início</a>
     <span>/</span>
-    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+    <span class="text-body font-medium">{{ topic.title }}</span>
   </nav>
 
   <!-- Header -->
-  <div class="flex items-center gap-4 mb-10">
-    <div class="w-14 h-14 bg-brand-red rounded-2xl flex items-center justify-center text-white text-3xl shrink-0">
+  <div class="flex flex-wrap items-center gap-4 mb-10">
+    <div class="w-14 h-14 border-2 border-brand-red rounded-full flex items-center justify-center text-3xl shrink-0">
       {{ topic.icon|default:"📁" }}
     </div>
-    <div>
-      <h1 class="text-2xl font-extrabold text-gray-900">{{ topic.title }}</h1>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-[28px] sm:text-[32px] font-bold text-ink tracking-[-1.2px] leading-tight">{{ topic.title }}</h1>
       {% if topic.description %}
-      <p class="text-gray-500 text-sm mt-0.5">{{ topic.description }}</p>
+      <p class="text-body/80 text-sm mt-1">{{ topic.description }}</p>
       {% endif %}
     </div>
     {% if user.is_staff or user.is_superuser %}
-    <div class="ml-auto flex gap-2">
+    <div class="flex gap-2">
       <a href="{% url 'admin_minor_topic_create' topic.slug %}"
-         class="bg-brand-yellow text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-brand-yellhov transition">
+         class="inline-flex items-center h-10 px-4 rounded-2xl bg-brand-yellow text-ink font-bold text-sm hover:bg-brand-yellhov transition">
         + Sub-tópico
       </a>
       <a href="{% url 'admin_major_topic_edit' topic.slug %}"
-         class="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+         class="inline-flex items-center h-10 px-4 rounded-2xl border-2 border-brand-red text-brand-red font-bold text-sm hover:bg-brand-red/10 transition">
         Editar
       </a>
     </div>
     {% endif %}
   </div>
 
-  <!-- Minor topics list -->
+  <!-- Sub-tópicos -->
   {% if minor_topics %}
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     {% for mt in minor_topics %}
     <a href="{% url 'minor_topic' topic.slug mt.slug %}"
-       class="group flex items-start gap-4 p-5 border-2 border-gray-100 rounded-2xl hover:border-brand-red hover:shadow-md transition bg-white">
-      <div class="w-10 h-10 bg-brand-yellow rounded-xl flex items-center justify-center text-white text-xl shrink-0">
+       class="group flex items-start gap-4 p-5 rounded-2xl bg-white border-2 border-brand-red hover:border-brand-yellow
+              hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition">
+      <div class="w-11 h-11 border-2 border-brand-red group-hover:border-brand-yellow transition rounded-full flex items-center justify-center text-xl shrink-0">
         {{ mt.icon|default:"📄" }}
       </div>
       <div class="min-w-0">
-        <p class="font-bold text-gray-900 group-hover:text-brand-red transition">{{ mt.title }}</p>
+        <p class="text-base font-semibold text-ink leading-snug group-hover:text-brand-red transition">{{ mt.title }}</p>
         {% if mt.description %}
-        <p class="text-gray-500 text-sm mt-0.5 line-clamp-2">{{ mt.description }}</p>
+        <p class="text-body/80 text-sm mt-1 line-clamp-2">{{ mt.description }}</p>
         {% endif %}
       </div>
     </a>
     {% endfor %}
   </div>
   {% else %}
-  <div class="text-center py-16 text-gray-400">
+  <div class="text-center py-16 bg-brand-yellow/20 rounded-[32px]">
     <p class="text-5xl mb-3">📭</p>
-    <p class="text-sm">Nenhum sub-tópico ainda.</p>
+    <p class="text-sm text-mute">Nenhum sub-tópico ainda.</p>
     {% if user.is_staff or user.is_superuser %}
-    <a href="{% url 'admin_minor_topic_create' topic.slug %}" class="mt-4 inline-block text-brand-red font-semibold text-sm underline">Criar sub-tópico</a>
+    <a href="{% url 'admin_minor_topic_create' topic.slug %}" class="mt-5 inline-flex items-center h-10 px-4 rounded-2xl bg-brand-red text-white font-bold text-sm hover:bg-brand-redhov transition">Criar sub-tópico</a>
     {% endif %}
   </div>
   {% endif %}

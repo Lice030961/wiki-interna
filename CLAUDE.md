@@ -67,7 +67,7 @@ Ferramentas não são tópicos nem têm `ContentBlock`, então tudo sobre elas v
 ## Gerador de Script de SA
 `/ferramentas/gerador-sa/` monta o script de abertura de SA do Salesforce a partir do texto da ficha do cliente copiado do SIS (Ctrl+A, Ctrl+C, com o "Mostrar" dos Ativos aberto). O parser fica em `static/js/script_generator.js` e roda **só no navegador**: nada de dados de cliente vai ao servidor, e o código não chama nem referencia nenhum sistema interno (só procura rótulos no texto colado). Não adicionar integração direta com o SIS/NOC — os endpoints internos não podem aparecer neste repo público.
 
-Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mail"; o plano é o serviço aberto (linha antes de "Adicionais do Contrato", já que um ADM pode ter vários links); "Manter endereço do SIS" (marcado por padrão) pode ser desmarcado quando o SIS repete o mesmo endereço em todos os links; PPPoE `@desktop.com.br` é encurtado até o `@` (outros domínios ficam completos); endereço sempre `Rua, número - Bairro - Cidade/SP`; cliente dedicado → Ativo `-` e sem GPON; Mudança de ponto também não leva GPON.
+Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mail"; o plano é o serviço aberto (linha antes de "Adicionais do Contrato", já que um ADM pode ter vários links); "Manter endereço do SIS" (marcado por padrão) pode ser desmarcado quando o SIS repete o mesmo endereço em todos os links; PPPoE `@desktop.com.br` é encurtado até o `@` (outros domínios ficam completos); endereço sempre `Rua, número - Bairro - Cidade/SP`; cliente dedicado → Ativo `-` e sem GPON; Mudança de ponto também não leva GPON; Navegação ("SEM NAVEGAÇÃO") esconde a escolha e usa sempre GPON UP (o cliente está conectado, só não navega).
 
 ## Seed command
 ```bash
@@ -84,7 +84,7 @@ Visual language follows `DESIGN.md` (Pinterest design system) **but with the Des
 - Shared CSS in `static/css/theme.css`: collapsible sidebar, glossary tooltips (red + yellow, Desktop palette), `[ATENÇÃO]` box, chat typing dots
 - Layout: red left sidebar, icons-only by default and expanding over the content on hover (logo → Home, Início, Ferramentas group, Assistente/chat; bottom: Painel Admin for admins, Entrar/Sair); drawer on mobile. Search bar stays in the white top bar (1px `ash` divider, same gray as the topic card borders). No footer.
 
-## Revamp de design — EM ANDAMENTO (primeira parte já publicada)
+## Revamp de design — CONCLUÍDO
 
 **Estado atual (27/09/2026):** a primeira parte do revamp (itens abaixo) foi commitada na branch `revamp`, mergeada na `main` e enviada para `origin` e `lice` — o Render publica a partir da `main`. O que está em "Falta fazer" continua pendente.
 
@@ -95,7 +95,10 @@ Visual language follows `DESIGN.md` (Pinterest design system) **but with the Des
 - Chat: cabeçalho vermelho com faixa amarela, mensagens do usuário em amarelo, do assistente em vermelho claro, fontes como pílulas
 - Login e as 11 telas de `templates/admin/` convertidas para o novo padrão (cantos 16px, neutros do DESIGN.md, foco amarelo, texto escuro sobre amarelo)
 - Ferramentas: registro único em `core/tools.py` (barra lateral, busca do header e chatbot); Assistente indica o caminho no menu em vez de escrever links
-- Gerador SA: instrução encurtada; "Administrativo" virou placeholder cinza (continua sendo o valor padrão no script); aviso amarelo logo abaixo dos botões Copiar/Limpar: "Lembre-se de sempre conferir o Script e adicionar Notas na SA!"
+- Tópico, sub-tópico e regionais: breadcrumb `mute`, título 28px, emoji em círculo com borda `brand-red`, painéis/blocos brancos com borda `brand-red` (clicáveis ficam amarelos no hover), botões `rounded-2xl` h-10, estado vazio em `brand-yellow/20`
+- Painéis do admin (formulários, lista de tópicos, blocos, glossário, regionais) com borda `brand-red`; campos de formulário continuam `hairline`
+- Gerador SA: entrada e script em painéis com borda `brand-red`, opções como pílulas (vermelho quando marcadas; Obs em amarelo), campos não encontrados destacados em amarelo;
+  instrução encurtada; "Administrativo" virou placeholder cinza (continua sendo o valor padrão no script); aviso amarelo logo abaixo dos botões Copiar/Limpar: "Lembre-se de sempre conferir o Script e adicionar Notas na SA!"
 
 **Preferências de design do usuário (já validadas):**
 - Paleta da Desktop sempre (vermelho `#AC2407`, amarelo `#EFBC00`), nada do vermelho do Pinterest
@@ -104,9 +107,6 @@ Visual language follows `DESIGN.md` (Pinterest design system) **but with the Des
 - Textos curtos: nada de explicação técnica que não ajuda quem usa a ferramenta
 
 **Falta fazer:**
-- Conteúdo interno das páginas de tópico (`major_topic.html`), sub-tópico (`minor_topic.html`) e regionais (`regionais.html`) — já usam a barra/header novos, mas blocos e botões ainda estão no estilo antigo
-- Revisar o visual interno do Gerador SA para o padrão novo
-- Aguardar novas ideias do usuário antes de continuar
 - Próximas entregas: mesmo fluxo — commit na `revamp`, merge na `main` e push (`origin` = `giovaniolivr/wiki-desktop`; depois `lice` = `Lice030961/wiki-interna`)
 
 **Observações:**

@@ -2,49 +2,49 @@
 {% block title %}{{ topic.title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-10">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
 
-  <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6 flex-wrap">
+  <nav class="flex items-center gap-2 text-sm text-mute mb-6 flex-wrap">
     <a href="{% url 'home' %}" class="hover:text-brand-red transition">Início</a>
     <span>/</span>
     <a href="{% url 'major_topic' major.slug %}" class="hover:text-brand-red transition">{{ major.title }}</a>
     <span>/</span>
-    <span class="text-gray-700 font-medium">{{ topic.title }}</span>
+    <span class="text-body font-medium">{{ topic.title }}</span>
   </nav>
 
-  <div class="flex items-center gap-4 mb-6">
-    <div class="w-12 h-12 bg-brand-red rounded-xl flex items-center justify-center text-white text-2xl shrink-0">
+  <div class="flex flex-wrap items-center gap-4 mb-8">
+    <div class="w-12 h-12 border-2 border-brand-red rounded-full flex items-center justify-center text-2xl shrink-0">
       {{ topic.icon|default:"🗺️" }}
     </div>
-    <div class="flex-1">
-      <h1 class="text-2xl font-extrabold text-gray-900">{{ topic.title }}</h1>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-[28px] font-bold text-ink tracking-[-1.2px] leading-tight">{{ topic.title }}</h1>
       {% if topic.description %}
-      <p class="text-gray-500 text-sm mt-0.5">{{ topic.description }}</p>
+      <p class="text-body/80 text-sm mt-1">{{ topic.description }}</p>
       {% endif %}
     </div>
     {% if user.is_staff or user.is_superuser %}
     <a href="{% url 'admin_regionais' %}"
-       class="shrink-0 border border-brand-red text-brand-red font-bold text-sm px-4 py-2 rounded-lg hover:bg-red-50 transition">
+       class="shrink-0 inline-flex items-center h-10 px-4 rounded-2xl border-2 border-brand-red text-brand-red font-bold text-sm hover:bg-brand-red/10 transition">
       Gerenciar
     </a>
     {% endif %}
   </div>
 
   <!-- Banner de Pesquisa -->
-  <div class="bg-white border border-gray-200 rounded-2xl p-5 mb-4 shadow-sm">
+  <div class="relative mb-5">
     <input id="reg-search" type="text"
            placeholder="Pesquisar cidade ou território..."
            autocomplete="off"
-           class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-red transition" />
-    <div id="reg-results" class="hidden mt-3 border border-gray-100 rounded-xl overflow-hidden"></div>
+           class="w-full h-12 px-5 rounded-full bg-card text-sm text-ink placeholder-ash border-2 border-transparent focus:bg-white focus:border-brand-yellow focus:outline-none transition" />
+    <div id="reg-results" class="hidden absolute left-0 right-0 top-full mt-2 z-10 bg-white border-2 border-brand-red rounded-2xl p-2 max-h-80 overflow-y-auto"></div>
   </div>
 
   <!-- Banner de Navegação -->
-  <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+  <div class="bg-white border-2 border-brand-red rounded-2xl overflow-hidden">
     <!-- Cabeçalho dinâmico -->
-    <div class="px-5 py-4 bg-gray-50 border-b border-gray-100 flex items-center gap-3">
+    <div class="px-5 py-4 bg-card border-b-2 border-brand-red flex items-center gap-3 flex-wrap">
       <span id="nav-icon" class="text-xl">🗺️</span>
-      <div id="nav-title" class="font-bold text-gray-900 text-base">Navegar por Regional</div>
+      <div id="nav-title" class="font-bold text-ink text-base">Navegar por Regional</div>
     </div>
     <!-- Conteúdo da navegação -->
     <div id="reg-nav" class="p-5"></div>
@@ -70,18 +70,18 @@ function render() {
     navIcon.textContent = '🗺️';
     navTitle.textContent = 'Navegar por Regional';
     if (!DATA.length) {
-      nav.innerHTML = '<div class="text-center py-10 text-gray-400"><p class="text-sm">Nenhuma região cadastrada ainda.</p></div>';
+      nav.innerHTML = '<div class="text-center py-10 text-mute"><p class="text-sm">Nenhuma região cadastrada ainda.</p></div>';
       return;
     }
     nav.innerHTML =
       '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">' +
       DATA.map(function(r) {
         return '<button onclick="pickRegiao(' + r.id + ')" ' +
-          'class="group flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl ' +
-          'hover:border-brand-red hover:shadow-md transition bg-white text-center">' +
+          'class="group flex flex-col items-center gap-3 p-6 border-2 border-brand-red rounded-2xl ' +
+          'hover:border-brand-yellow hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition bg-white text-center">' +
           '<span class="text-4xl">' + r.icon + '</span>' +
-          '<span class="font-bold text-gray-900 group-hover:text-brand-red transition">' + r.nome + '</span>' +
-          '<span class="text-xs text-gray-400">' + r.territorios.length + ' território' + (r.territorios.length !== 1 ? 's' : '') + '</span>' +
+          '<span class="font-semibold text-ink group-hover:text-brand-red transition">' + r.nome + '</span>' +
+          '<span class="text-xs font-bold px-3 py-1 rounded-full bg-brand-red text-white">' + r.territorios.length + ' território' + (r.territorios.length !== 1 ? 's' : '') + '</span>' +
           '</button>';
       }).join('') +
       '</div>';
@@ -92,23 +92,23 @@ function render() {
     navIcon.textContent = selRegiao.icon;
     navTitle.innerHTML =
       '<button onclick="pickRegiao(null)" class="text-brand-red hover:underline font-bold">Regionais</button>' +
-      '<span class="text-gray-400 mx-2">/</span>' +
+      '<span class="text-mute mx-2">/</span>' +
       '<span>' + selRegiao.nome + '</span>';
 
     if (!selRegiao.territorios.length) {
-      nav.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhum território nesta regional.</p>';
+      nav.innerHTML = '<p class="text-sm text-mute text-center py-8">Nenhum território nesta regional.</p>';
       return;
     }
     nav.innerHTML =
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
       selRegiao.territorios.map(function(t) {
         return '<button onclick="pickTerritorio(' + t.id + ')" ' +
-          'class="group flex items-center gap-4 p-4 border-2 border-gray-100 rounded-xl ' +
-          'hover:border-brand-yellow hover:shadow-sm transition bg-white text-left">' +
+          'class="group flex items-center gap-4 p-4 border-2 border-brand-red rounded-2xl ' +
+          'hover:border-brand-yellow hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition bg-white text-left">' +
           '<span class="text-2xl shrink-0">📍</span>' +
           '<div>' +
-            '<p class="font-semibold text-gray-900 group-hover:text-brand-red transition">' + t.nome + '</p>' +
-            '<p class="text-xs text-gray-400">' + t.cidades.length + ' cidade' + (t.cidades.length !== 1 ? 's' : '') + '</p>' +
+            '<p class="font-semibold text-ink group-hover:text-brand-red transition">' + t.nome + '</p>' +
+            '<p class="text-xs text-mute">' + t.cidades.length + ' cidade' + (t.cidades.length !== 1 ? 's' : '') + '</p>' +
           '</div>' +
           '</button>';
       }).join('') +
@@ -119,13 +119,13 @@ function render() {
   navIcon.textContent = selRegiao.icon;
   navTitle.innerHTML =
     '<button onclick="pickRegiao(null)" class="text-brand-red hover:underline font-bold">Regionais</button>' +
-    '<span class="text-gray-400 mx-2">/</span>' +
+    '<span class="text-mute mx-2">/</span>' +
     '<button onclick="pickTerritorio(null)" class="text-brand-red hover:underline font-bold">' + selRegiao.nome + '</button>' +
-    '<span class="text-gray-400 mx-2">/</span>' +
+    '<span class="text-mute mx-2">/</span>' +
     '<span>' + selTerritorio.nome + '</span>';
 
   if (!selTerritorio.cidades.length) {
-    nav.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhuma cidade neste território.</p>';
+    nav.innerHTML = '<p class="text-sm text-mute text-center py-8">Nenhuma cidade neste território.</p>';
     return;
   }
   nav.innerHTML =
@@ -133,7 +133,7 @@ function render() {
     selTerritorio.cidades.map(function(c) {
       return '<div class="flex items-center gap-2 py-1.5">' +
         '<span class="text-brand-red text-xs font-bold">•</span>' +
-        '<span class="text-sm text-gray-700">' + c + '</span>' +
+        '<span class="text-sm text-body">' + c + '</span>' +
         '</div>';
     }).join('') +
     '</div>';
@@ -173,16 +173,23 @@ regInput.addEventListener('input', function() {
   });
 
   if (!matches.length) {
-    regResults.innerHTML = '<p class="px-4 py-3 text-sm text-gray-400">Nenhum resultado encontrado.</p>';
+    regResults.innerHTML = '<p class="px-4 py-3 text-sm text-mute">Nenhum resultado encontrado.</p>';
   } else {
     regResults.innerHTML = matches.slice(0, 15).map(function(m) {
       return '<button onclick="goTo(' + m.rId + ',' + m.tId + ')" ' +
-        'class="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition">' +
-        '<span class="text-sm text-gray-800">' + m.label + '</span>' +
+        'class="w-full text-left px-4 py-3 rounded-2xl hover:bg-card transition">' +
+        '<span class="text-sm text-ink">' + m.label + '</span>' +
         '</button>';
     }).join('');
   }
   regResults.classList.remove('hidden');
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#reg-search') && !e.target.closest('#reg-results')) regResults.classList.add('hidden');
+});
+regInput.addEventListener('focus', function() {
+  if (this.value.trim()) regResults.classList.remove('hidden');
 });
 
 function goTo(rId, tId) {

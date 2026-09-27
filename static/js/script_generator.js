@@ -138,9 +138,11 @@
     const dedicado = selected('dedicado') === 'sim';
     const tratativa = selected('tratativa');
     const needsGpon = !dedicado && tratativa !== 'mudanca';
-    const gpon = needsGpon ? selected('gpon') : '';
+    // Sem navegação = cliente conectado (GPON UP) mas não navega: GPON é sempre UP, sem perguntar.
+    const gponFixo = tratativa === 'navegacao';
+    const gpon = !needsGpon ? '' : gponFixo ? 'UP' : selected('gpon');
 
-    $('gpon-group').classList.toggle('hidden', !needsGpon);
+    $('gpon-group').classList.toggle('hidden', !needsGpon || gponFixo);
     $('f-ativo').disabled = dedicado;
     // As Obs padrão (IGREJA, LOS VERMELHA...) não se aplicam a dedicado: só texto livre.
     $('obs-presets').classList.toggle('hidden', dedicado);
@@ -154,8 +156,8 @@
     ['adm'].concat(fieldIds).forEach((id) => {
       const el = $('f-' + id);
       const missing = !el.disabled && !el.value.trim() && id !== 'responsavel';
-      el.classList.toggle('border-amber-400', missing);
-      el.classList.toggle('bg-amber-50', missing);
+      el.classList.toggle('!border-brand-yellow', missing);
+      el.classList.toggle('!bg-brand-yellow/10', missing);
     });
 
     const obs = buildObs();
