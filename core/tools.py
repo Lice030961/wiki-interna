@@ -16,11 +16,12 @@ TOOLS = [
         'description': (
             'Monta o script de abertura de SA do Salesforce a partir da ficha do cliente copiada do SIS '
             '(Ctrl+A, Ctrl+C com o "Mostrar" dos Ativos aberto): preenche ADM, PPPoE, nome, plano, ativo, '
-            'telefone e endereço, e deixa escolher cliente dedicado, GPON, tratativa e observações.'
+            'telefone e endereço, e deixa escolher cliente dedicado, GPON, tratativa e observações. '
+            'Também monta a SA de Mudança de plano a partir do e-mail da solicitação.'
         ),
         # Palavras soltas (sem acento/maiúscula importar) que levam a esta ferramenta na
         # busca e no chatbot, além das palavras do próprio nome.
-        'keywords': ['script', 'gerador', 'sa', 'salesforce', 'sis', 'ficha'],
+        'keywords': ['script', 'gerador', 'sa', 'salesforce', 'sis', 'ficha', 'mudanca de plano', 'alteracao de plano'],
     },
 ]
 

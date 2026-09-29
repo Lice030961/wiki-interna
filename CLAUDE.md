@@ -69,6 +69,8 @@ Ferramentas não são tópicos nem têm `ContentBlock`, então tudo sobre elas v
 
 Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mail"; o plano é o serviço aberto (linha antes de "Adicionais do Contrato", já que um ADM pode ter vários links); "Manter endereço do SIS" (marcado por padrão) pode ser desmarcado quando o SIS repete o mesmo endereço em todos os links; PPPoE `@desktop.com.br` é encurtado até o `@` (outros domínios ficam completos); endereço sempre `Rua, número - Bairro - Cidade/SP`; cliente dedicado → Ativo `-` e sem GPON; Mudança de ponto também não leva GPON; Navegação ("SEM NAVEGAÇÃO") e Lentidão escondem a escolha e usam sempre GPON UP (o cliente está conectado); botões na ordem Conexão, Oscilação (UP/DOWN) → Navegação, Lentidão (só UP) → Mudança de ponto (sem GPON); Obs "LIBERAR TÉCNICO" escreve "NECESSÁRIO LIBERAR TÉCNICO".
 
+**Mudança de plano** (último botão da Tratativa): troca o modelo do script e os campos editáveis (`p-*`); o texto colado passa a ser o e-mail da solicitação (Ctrl+A, Ctrl+C), lido por `parseEmail`. Sem GPON e sem "Cliente dedicado". ADM = primeiro `ADM:` do e-mail sem zeros à esquerda; quem solicitou = quem enviou o e-mail (linha "… adicionou uma nota", ou o `From:`), como "Nome Sobrenome" + ` - B2B Desktop`; Responsável e Contato vêm de "Contato para Agendar instalação" (quem vai atender, diferente de quem enviou); Roteador desbloqueado = "Precisa de roteador?"; endereço junta as linhas quebradas do e-mail (` / ` → `, `, `Cep:` → ` - `). Plano atual, Complemento e Horário são preenchidos à mão; Ativo é `-`; SOLICITAÇÃO: `Mudança de plano`.
+
 ## Seed command
 ```bash
 python manage.py seed             # só o usuário admin (roda a cada deploy via build.sh)

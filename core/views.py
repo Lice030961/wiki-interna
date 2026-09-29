@@ -117,6 +117,8 @@ def script_generator(request):
             ('navegacao', 'Navegação'),
             ('lentidao', 'Lentidão'),
             ('mudanca', 'Mudança de ponto'),
+            # Mudança de plano troca o modelo do script: dados vêm do e-mail, não do SIS.
+            ('plano', 'Mudança de plano'),
         ],
         # (texto no script, rótulo do botão)
         'obs_options': [
@@ -136,6 +138,20 @@ def script_generator(request):
             ('endereco', 'Endereço'),
             ('horario', 'Horário de atendimento'),
             ('responsavel', 'Responsável'),
+        ],
+        'plano_fields': [
+            ('adm', 'ADM'),
+            ('solicitante', 'Quem solicitou (Desktop)'),
+            ('nome', 'Nome da Empresa'),
+            ('plano_atual', 'Plano atual'),
+            ('plano_novo', 'Plano novo'),
+            ('roteador', 'Roteador desbloqueado'),
+            ('ativo', 'Ativo do equipamento'),
+            ('endereco', 'Endereço'),
+            ('complemento', 'Complemento'),
+            ('horario', 'Horário de atendimento'),
+            ('responsavel', 'Responsável'),
+            ('tel', 'Contato'),
         ],
     })
 

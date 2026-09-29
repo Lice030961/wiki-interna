@@ -1,5 +1,5 @@
-// Gerador de Script de SA — roda 100% no navegador. O texto colado do SIS
-// nunca é enviado ao servidor nem salvo.
+// Gerador de Script de SA — roda 100% no navegador. O texto colado (ficha do SIS
+// ou e-mail de mudança de plano) nunca é enviado ao servidor nem salvo.
 (function () {
   // PPPoE desse domínio (plano não legado) é encurtado até o "@".
   const SHORT_PPPOE_DOMAIN = 'desktop.com.br';
@@ -10,12 +10,19 @@
     oscilacao: 'OSCILAÇÃO',
     lentidao: 'LENTIDÃO',
     mudanca: 'MUDANÇA DE PONTO',
+    plano: 'Mudança de plano',
   };
+  const SOLICITANTE_SUFIXO = ' - B2B Desktop';
   const ATIVO_RE = /\b[A-Z]{2}\d{6}\b/;
   const PHONE_RE = /\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/;
 
   const $ = (id) => document.getElementById(id);
   const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'endereco', 'responsavel', 'tel'];
+  // Campos do modo Mudança de plano (ids "p-..."), preenchidos a partir do e-mail.
+  const planoIds = ['adm', 'solicitante', 'nome', 'plano_atual', 'plano_novo', 'roteador', 'ativo',
+    'endereco', 'complemento', 'horario', 'responsavel', 'tel'];
+  // Podem ficar vazios: têm valor padrão ou são preenchidos à mão só quando existem.
+  const planoOpcionais = ['ativo', 'complemento', 'horario', 'responsavel'];
 
   // Remove acentos preservando o tamanho da string, para os índices baterem com o original.
   function fold(s) {
@@ -116,6 +123,89 @@
     return out;
   }
 
+  // ── E-mail de mudança de plano ──────────────────────────────────────────────
+  // Rótulos do formulário do e-mail; uma linha que começa com um deles nunca é
+  // continuação da anterior.
+  const EMAIL_LABELS = ['razao social', 'cnpj', 'adm', 'plano contratado', 'valor negociado',
+    'taxa de instalacao', 'sla', 'endereco', 'quantidade de links', 'vigencia', 'contato',
+    'e-mail', 'precisa de roteador', 'obs'];
+
+  function titleCase(s) {
+    return s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  }
+
+  // "Rótulo: valor" ou "Pergunta? valor". O e-mail quebra linhas longas (~76 colunas),
+  // então uma linha comprida continua na seguinte até uma linha vazia ou outro rótulo.
+  function emailField(lines, label) {
+    const re = new RegExp('^' + escapeRe(label) + '[^:?]*[?:]+\\s*');
+    for (let i = 0; i < lines.length; i++) {
+      const m = fold(lines[i]).match(re);
+      if (!m) continue;
+      let value = lines[i].slice(m[0].length).trim();
+      let prev = lines[i];
+      while (prev.length >= 65 && lines[i + 1] && !EMAIL_LABELS.some((l) => fold(lines[i + 1]).startsWith(l))) {
+        i += 1;
+        prev = lines[i];
+        value += ' ' + prev;
+      }
+      value = value.replace(/\s+/g, ' ').trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function parseEmail(text) {
+    const lines = text.split(/\r?\n/).map((l) => l.normalize('NFC').trim());
+    const out = {};
+
+    // Primeiro "ADM: <número>" do e-mail (assunto ou corpo), sem os zeros à esquerda.
+    const adm = text.match(/ADM:[ \t]*0*(\d+)/i);
+    out.adm = adm ? adm[1] : '';
+
+    // Quem enviou (funcionário da Desktop), como "Nome Sobrenome". Vem de
+    // "<Nome completo> adicionou uma nota"; sem essa linha, do endereço em "From:".
+    let sender = '';
+    const nota = text.match(/^\s*(.+?)\s+adicionou uma nota/im);
+    if (nota) {
+      sender = nota[1];
+    } else {
+      const from = text.match(/^\s*From:\s*([\w.-]+)@/im);
+      if (from) sender = from[1].replace(/[._-]+/g, ' ');
+    }
+    const words = sender.trim().split(/\s+/).filter(Boolean);
+    out.solicitante = titleCase(words.length > 1 ? words[0] + ' ' + words[words.length - 1] : words.join(''));
+
+    out.nome = emailField(lines, 'razao social');
+    out.plano_novo = emailField(lines, 'plano contratado');
+
+    // "Rod. X, s/n - km 74 - Dist. industrial / Sarapui. Cep: 18.225-000"
+    // → "Rod. X, s/n - km 74 - Dist. industrial, Sarapui - 18.225-000"
+    out.endereco = emailField(lines, 'endereco')
+      .replace(/\s+\/\s+/g, ', ')
+      .replace(/[.,]?\s*cep\s*:?\s*/i, ' - ')
+      .trim();
+
+    const roteador = fold(emailField(lines, 'precisa de roteador'));
+    out.roteador = roteador.startsWith('s') ? 'SIM' : roteador.startsWith('n') ? 'NÃO' : '';
+
+    // "Contato para Agendar instalação: Franciele - 1532769323": nome + telefone(s).
+    const contato = emailField(lines, 'contato');
+    const phones = [];
+    (contato.match(new RegExp(PHONE_RE.source, 'g')) || []).forEach((m) => {
+      const digits = m.replace(/\D/g, '');
+      if (!phones.includes(digits)) phones.push(digits);
+    });
+    out.tel = phones.join(' / ');
+    out.responsavel = contato
+      .replace(new RegExp(PHONE_RE.source, 'g'), ' ')
+      .replace(/[\s\-–\/|,:]+$/, '')
+      .replace(/^[\s\-–\/|,:]+/, '')
+      .trim();
+
+    out.ativo = '-';
+    return out;
+  }
+
   function selected(name) {
     const el = document.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : '';
@@ -135,7 +225,76 @@
     return parts.join(' / ');
   }
 
+  // Um telefone por linha: o primeiro logo após o rótulo, os demais embaixo.
+  function phoneLines(tel) {
+    return tel.split('/').map((t) => t.trim()).filter(Boolean).join('\n');
+  }
+
+  function markMissing(el, missing) {
+    el.classList.toggle('!border-brand-yellow', missing);
+    el.classList.toggle('!bg-brand-yellow/10', missing);
+  }
+
+  function isPlano() {
+    return selected('tratativa') === 'plano';
+  }
+
+  function setMode(plano) {
+    $('fields-sis').classList.toggle('hidden', plano);
+    $('fields-plano').classList.toggle('hidden', !plano);
+    $('gpon-row').classList.toggle('hidden', plano);
+    $('intro-sis').classList.toggle('hidden', plano);
+    $('intro-plano').classList.toggle('hidden', !plano);
+    $('sis-label').textContent = plano ? 'Texto do e-mail' : 'Texto da página do SIS';
+    $('f-sis').placeholder = plano ? 'Cole aqui o conteúdo do e-mail da solicitação...' : 'Cole aqui o conteúdo da ficha do cliente...';
+  }
+
+  function renderPlano() {
+    // Na mudança de plano as Obs padrão valem sempre (não há "cliente dedicado").
+    $('obs-presets').classList.remove('hidden');
+
+    const v = {};
+    planoIds.forEach((id) => {
+      const el = $('p-' + id);
+      v[id] = el.value.trim();
+      markMissing(el, !v[id] && !planoOpcionais.includes(id));
+    });
+
+    const obs = buildObs();
+    $('preview').value = [
+      'ATENDIMENTO PREMIUM',
+      '',
+      'Obs:' + (obs ? ' ' + obs : ''),
+      '',
+      'Roteador desbloqueado: ' + v.roteador,
+      '',
+      'Nome de quem solicitou a VT: ' + (v.solicitante ? v.solicitante + SOLICITANTE_SUFIXO : ''),
+      '',
+      'Nome da Empresa: ' + v.nome,
+      'ADM: ' + v.adm,
+      'Ativo do equipamento: ' + (v.ativo || '-'),
+      '',
+      'Plano atual: ' + v.plano_atual,
+      'Plano novo: ' + v.plano_novo,
+      '',
+      'Endereço: ' + v.endereco,
+      'Complemento: ' + v.complemento,
+      '',
+      'Horário de atendimento: ' + (v.horario || 'Administrativo'),
+      'Responsável: ' + (v.responsavel || DEFAULT_RESPONSAVEL),
+      'Contato: ' + phoneLines(v.tel),
+      '',
+      'SOLICITAÇÃO: ' + SOLICITACAO.plano,
+    ].join('\n');
+
+    $('pending').textContent = v.plano_atual ? '' : 'Falta: plano atual';
+  }
+
   function render() {
+    if (isPlano()) {
+      renderPlano();
+      return;
+    }
     const dedicado = selected('dedicado') === 'sim';
     const tratativa = selected('tratativa');
     const needsGpon = !dedicado && tratativa !== 'mudanca';
@@ -156,9 +315,7 @@
 
     ['adm'].concat(fieldIds).forEach((id) => {
       const el = $('f-' + id);
-      const missing = !el.disabled && !el.value.trim() && id !== 'responsavel';
-      el.classList.toggle('!border-brand-yellow', missing);
-      el.classList.toggle('!bg-brand-yellow/10', missing);
+      markMissing(el, !el.disabled && !el.value.trim() && id !== 'responsavel');
     });
 
     const obs = buildObs();
@@ -177,8 +334,7 @@
       'Horário de atendimento: ' + ($('f-horario').value.trim() || 'Administrativo'),
       'Responsável: ' + v.responsavel,
       'CONTATO:',
-      // Um telefone por linha: o primeiro logo após "Tel:", os demais embaixo.
-      'Tel: ' + v.tel.split('/').map((t) => t.trim()).filter(Boolean).join('\n'),
+      'Tel: ' + phoneLines(v.tel),
       '',
       'SOLICITAÇÃO: ' + buildSolicitacao(dedicado, tratativa, gpon),
     ].join('\n');
@@ -195,6 +351,15 @@
   let sisEndereco = '';
 
   function reparse() {
+    if (isPlano()) {
+      const parsed = parseEmail($('f-sis').value);
+      planoIds.forEach((id) => {
+        // Plano atual, complemento e horário não vêm do e-mail: não apaga o que foi digitado.
+        if (id in parsed) $('p-' + id).value = parsed[id];
+      });
+      render();
+      return;
+    }
     const parsed = parse($('f-sis').value);
     sisEndereco = parsed.endereco;
     if (!$('keep-endereco').checked) parsed.endereco = '';
@@ -224,11 +389,14 @@
 
   function clearAll() {
     ['f-adm', 'f-sis', 'f-obs'].forEach((id) => { $(id).value = ''; });
+    planoIds.forEach((id) => { $('p-' + id).value = ''; });
     $('f-adm').dataset.auto = '1';
     $('f-horario').value = '';
     document.querySelectorAll('input[name="tratativa"], input[name="gpon"], input[name="obs"]').forEach((r) => { r.checked = false; });
     document.querySelector('input[name="dedicado"][value="nao"]').checked = true;
     $('keep-endereco').checked = true;
+    modoPlano = false;
+    setMode(false);
     reparse();
     $('f-sis').focus();
   }
@@ -237,6 +405,14 @@
   $('f-adm').addEventListener('input', () => { $('f-adm').dataset.auto = ''; render(); });
   document.querySelectorAll('.sg-input').forEach((el) => el.addEventListener('input', render));
   document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach((el) => el.addEventListener('change', render));
+  // Entrar ou sair da Mudança de plano troca o modelo e relê o texto colado.
+  let modoPlano = false;
+  document.querySelectorAll('input[name="tratativa"]').forEach((el) => el.addEventListener('change', () => {
+    if (isPlano() === modoPlano) return;
+    modoPlano = isPlano();
+    setMode(modoPlano);
+    reparse();
+  }));
   $('keep-endereco').addEventListener('change', (e) => {
     $('f-endereco').value = e.target.checked ? sisEndereco : '';
     render();
