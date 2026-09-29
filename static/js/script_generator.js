@@ -124,32 +124,73 @@
   }
 
   // ── E-mail de mudança de plano ──────────────────────────────────────────────
-  // Rótulos do formulário do e-mail; uma linha que começa com um deles nunca é
-  // continuação da anterior.
-  const EMAIL_LABELS = ['razao social', 'cnpj', 'adm', 'plano contratado', 'valor negociado',
-    'taxa de instalacao', 'sla', 'endereco', 'quantidade de links', 'vigencia', 'contato',
-    'e-mail', 'precisa de roteador', 'obs', 'nome', 'telefone', 'empresa'];
+  // Diferente da ficha do SIS, o e-mail não tem formato fixo: vem de pessoas
+  // diferentes, às vezes encaminhado, com rótulos variados. Cada campo aceita
+  // vários rótulos (regex sobre a linha sem acento e minúscula, sempre no começo
+  // da linha), seguidos de um separador opcional (":", "?", "=", ">>>", "-").
+  // O valor fica na mesma linha ou, se a linha acaba no rótulo, na de baixo.
+  const EMAIL_FIELDS = {
+    nome: ['razao social( do cliente)?', 'nome da empresa', 'empresa cliente', 'cliente(?=\\s*:)'],
+    plano_novo: ['plano novo', 'novo plano', '(plano|produto)( \\/ (plano|produto))? contratad[oa]', 'plano(?=\\s*:)'],
+    plano_atual: ['plano atual'],
+    endereco: ['endereco( completo)?( d[aeo])?( (instalacao|ativacao))?'],
+    complemento: ['complemento'],
+    horario: ['horario( de (atendimento|funcionamento))?'],
+    roteador: ['precisa( d[eo])? roteador', 'roteador(?=\\s*[:?])'],
+    // Quem vai receber o técnico no local (não quem enviou o e-mail), em ordem de preferência.
+    contato: ['contato para agendar( a)?( instalacao)?', 'contato( no)? local', 'contato tecnico',
+      'responsavel( no local| tecnico| pelo local)?', 'contato(?=\\s*:)'],
+    contatoNome: ['nome( do)? contato( tecnico)?'],
+    contatoTel: ['(telefone|tel|celular)( do)? contato( tecnico)?'],
+  };
+  const EMAIL_SEP = '\\b\\s*[:?=>\\-–]*\\s*';
+  const emailRes = {};
+  Object.keys(EMAIL_FIELDS).forEach((key) => {
+    emailRes[key] = EMAIL_FIELDS[key].map((p) => new RegExp('^(' + p + ')' + EMAIL_SEP));
+  });
+  // Outros rótulos comuns do e-mail: uma linha que começa com eles nunca é continuação da anterior.
+  const EMAIL_LABELS_RE = /^(cnpj|valor|taxa|sla|quantidade|qtde|vigencia|contrato|e-?mail|obs|empresa|telefone|nome|mailto|instalacao|att|grato)\b/;
+  // Caixas de e-mail da Desktop que não são pessoas.
+  const GENERIC_MAILBOXES = ['premium', 'operacoes', 'suporte', 'analises', 'noc', 'comercial', 'financeiro', 'atendimento'];
+  const HEADER_RE = /^\s*(from|de|enviad[oa] por|remetente)\s*:/i;
 
   function titleCase(s) {
     return s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
   }
 
-  // "Rótulo: valor" ou "Pergunta? valor". O e-mail quebra linhas longas (~76 colunas),
-  // então uma linha comprida continua na seguinte até uma linha vazia ou outro rótulo.
-  function emailField(lines, label) {
-    const re = new RegExp('^' + escapeRe(label) + '[^:?]*[?:]+\\s*');
-    for (let i = 0; i < lines.length; i++) {
-      const m = fold(lines[i]).match(re);
-      if (!m) continue;
-      let value = lines[i].slice(m[0].length).trim();
-      let prev = lines[i];
-      while (prev.length >= 65 && lines[i + 1] && !EMAIL_LABELS.some((l) => fold(lines[i + 1]).startsWith(l))) {
-        i += 1;
-        prev = lines[i];
-        value += ' ' + prev;
+  function isEmailLabel(line) {
+    const f = fold(line);
+    return EMAIL_LABELS_RE.test(f) || Object.keys(emailRes).some((k) => emailRes[k].some((re) => re.test(f)));
+  }
+
+  // Se o valor continua na próxima linha. O e-mail quebra linhas longas (~76 colunas);
+  // endereço também continua numa linha com CEP/cidade, e contato numa linha com o telefone.
+  function continues(kind, value, prev, next) {
+    if (!next || isEmailLabel(next)) return false;
+    if (!value) return true;
+    if (prev.length >= 65) return true;
+    if (kind === 'endereco') return /\bcep\b|\d{2}\.?\d{3}-?\d{3}|^[-–]|\bsp\b/.test(fold(next));
+    if (kind === 'contato') return !PHONE_RE.test(value) && PHONE_RE.test(next);
+    return false;
+  }
+
+  function emailField(lines, key, kind) {
+    for (const re of emailRes[key]) {
+      for (let i = 0; i < lines.length; i++) {
+        const m = fold(lines[i]).match(re);
+        if (!m) continue;
+        let value = lines[i].slice(m[0].length).trim();
+        let prev = lines[i];
+        for (let n = 0; n < 3 && continues(kind, value, prev, lines[i + 1]); n++) {
+          i += 1;
+          prev = lines[i];
+          // Linhas de endereço viram partes separadas por " - ", a não ser que já tenham o traço.
+          const glue = kind === 'endereco' && value && !/[-–]$/.test(value) && !/^[-–]/.test(prev) ? ' - ' : ' ';
+          value = value ? value + glue + prev : prev;
+        }
+        value = value.replace(/\s+/g, ' ').trim();
+        if (value) return value;
       }
-      value = value.replace(/\s+/g, ' ').trim();
-      if (value) return value;
     }
     return '';
   }
@@ -163,27 +204,69 @@
     return phones;
   }
 
+  // "Marcelo  (16)99742-3851" → "Marcelo"
+  function contactName(value) {
+    return value
+      .replace(new RegExp(PHONE_RE.source, 'g'), ' ')
+      .replace(/\b(tel|telefone|cel|celular|fone|whats(app)?)\b\.?:?/gi, ' ')
+      .replace(/[()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/^[\s\-–\/|,:]+|[\s\-–\/|,:]+$/g, '')
+      .trim();
+  }
+
+  // Formato parecido com o do SIS: "Rua, número - Bairro - Cidade/SP - CEP".
+  // "Dist. industrial / Sarapui. Cep: 18.225-000" → "Dist. industrial, Sarapui - 18.225-000"
+  // "Santa Helena  SP  cep 14920-110" → "Santa Helena/SP - 14920-110"
+  function formatEndereco(s) {
+    return s
+      .replace(/\s+/g, ' ')
+      .replace(/\s+\/\s+/g, ', ')
+      .replace(/[.,]?\s*\bcep\b\s*:?\s*/i, ' - ')
+      .replace(/\s*[-–]?\s*\bSP\b\.?(?=\s*[-–]|\s*$)/i, '/SP')
+      .replace(/\s+[-–](\s+[-–])+\s+/g, ' - ')
+      .replace(/^[\s\-–,]+|[\s\-–,]+$/g, '')
+      .trim();
+  }
+
+  // E-mails pessoais da Desktop (nome.sobrenome) de um trecho, como [nome, sobrenome].
+  function desktopPeople(s) {
+    return Array.from(fold(s).matchAll(/\b([a-z]+)\.([a-z]+)@desktop\.[a-z.]+/g))
+      .filter((m) => !GENERIC_MAILBOXES.includes(m[1]))
+      .map((m) => [m[1], m[2]]);
+  }
+
   // Quem enviou o e-mail (funcionário da Desktop), como "Nome Sobrenome".
-  // O remetente vem do primeiro "From:" (nome.sobrenome ou nome.<inicial>sobrenome,
-  // ex.: pedro.mcaxias). Procura no texto (assinatura, linha "… adicionou uma nota")
-  // um nome que case com ele; se não achar, monta a partir do próprio e-mail.
+  // Remetente = e-mail pessoal da Desktop no primeiro "From:"/"De:" que tiver um
+  // (encaminhados trazem vários); sem nenhum, o primeiro fora de To/CC. O e-mail é
+  // nome.sobrenome ou nome.<inicial>sobrenome (ex.: pedro.mcaxias), então procura no
+  // texto (assinatura, cabeçalho, "… adicionou uma nota") um nome que case com ele.
   function findSolicitante(text, lines) {
-    const from = text.match(/^\s*From:\s*([\w.-]+)@/im);
-    if (!from) {
+    let person = null;
+    for (const line of lines) {
+      if (HEADER_RE.test(line) && desktopPeople(line).length) { person = desktopPeople(line)[0]; break; }
+    }
+    if (!person) {
+      const body = lines.filter((l) => !/^\s*(to|cc|para|destinat[aá]rios?)\s*:/i.test(l)).join('\n');
+      person = desktopPeople(body)[0] || null;
+    }
+    if (!person) {
       const nota = text.match(/^\s*(.+?)\s+adicionou uma nota/im);
       const words = nota ? nota[1].trim().split(/\s+/) : [];
       return titleCase(words.length > 1 ? words[0] + ' ' + words[words.length - 1] : words.join(''));
     }
-    const parts = fold(from[1]).split(/[._-]+/).filter(Boolean);
-    const first = parts[0];
-    const rest = parts.slice(1).join('');
-    if (!rest) return titleCase(first);
+    const [first, rest] = person;
 
     for (const raw of lines) {
-      const line = raw.replace(/\s+adicionou uma nota.*$/i, '').trim();
+      const line = raw
+        .replace(/\s+adicionou uma nota.*$/i, '')
+        .replace(HEADER_RE, '')
+        .replace(/<[^>]*>|mailto:\S+|\S+@\S+/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
       if (!/^[A-Za-zÀ-ÿ' ]+$/.test(line)) continue;
-      const original = line.split(/\s+/);
-      const words = fold(line).split(/\s+/);
+      const original = line.split(' ');
+      const words = fold(line).split(' ');
       if (original.length < 2 || original.length > 6 || words[0] !== first) continue;
       for (let i = 1; i < words.length; i++) {
         // "reis" == "reis", ou "mcaxias" == "m" + "caxias" (inicial de um nome do meio).
@@ -194,49 +277,47 @@
     return titleCase(first + ' ' + rest);
   }
 
+  // "Precisa de roteador? SIM/NÃO"; sem essa pergunta, procura no texto
+  // ("sem roteador", "+ Roteador", "considerar roteador", "precisa do roteador"...).
+  function findRoteador(text, lines) {
+    const answer = fold(emailField(lines, 'roteador'));
+    if (answer.startsWith('s')) return 'SIM';
+    if (answer.startsWith('n')) return 'NÃO';
+    const t = fold(text);
+    if (/(sem|nao (precisa|necessita)( d[eo])?|ja (possui|tem))\s+(o\s+|um\s+)?roteador/.test(t)) return 'NÃO';
+    if (/(instalacao d[eo]|\+|precisa( d[eo])?|necessita( d[eo])?|considerar|enviar|mandar|incluir|com)\s+(o\s+|um\s+)?roteador/.test(t)) return 'SIM';
+    return '';
+  }
+
   function parseEmail(text) {
     const lines = text.split(/\r?\n/).map((l) => l.normalize('NFC').trim());
     const out = {};
 
-    // Primeiro "ADM: <número>" ou "ADM <número>" do e-mail (assunto ou corpo), sem os zeros à esquerda.
-    const adm = text.match(/\bADM\b[:# \t]*0*(\d{4,})/i);
+    // Primeiro "ADM: <número>" / "ADM <número>" / "ADM Nº <número>" do e-mail (assunto ou
+    // corpo), sem os zeros à esquerda.
+    const adm = text.match(/\bADM\b\s*(?:n[º°o.]\s*)?[:#º°\s]*0*(\d{4,})/i);
     out.adm = adm ? adm[1] : '';
 
     out.solicitante = findSolicitante(text, lines);
+    out.nome = emailField(lines, 'nome');
+    out.plano_novo = emailField(lines, 'plano_novo');
+    out.endereco = formatEndereco(emailField(lines, 'endereco', 'endereco'));
+    out.roteador = findRoteador(text, lines);
 
-    out.nome = emailField(lines, 'razao social');
-    out.plano_novo = emailField(lines, 'plano contratado');
-
-    // "Rod. X, s/n - km 74 - Dist. industrial / Sarapui. Cep: 18.225-000"
-    // → "Rod. X, s/n - km 74 - Dist. industrial, Sarapui - 18.225-000"
-    out.endereco = emailField(lines, 'endereco')
-      .replace(/\s+\/\s+/g, ', ')
-      .replace(/[.,]?\s*cep\s*:?\s*/i, ' - ')
-      .trim();
-
-    // "Precisa de roteador? SIM/NÃO". Sem essa pergunta, "Instalação de Roteador" ou
-    // "+ Roteador" no texto indica SIM; senão fica vazio para preencher.
-    const roteador = fold(emailField(lines, 'precisa de roteador'));
-    if (roteador) {
-      out.roteador = roteador.startsWith('s') ? 'SIM' : roteador.startsWith('n') ? 'NÃO' : '';
-    } else {
-      out.roteador = /(instala[çc][ãa]o de|\+)\s*roteador/i.test(text) ? 'SIM' : '';
-    }
-
-    // Quem vai atender o técnico: "Contato para Agendar instalação: Franciele - 1532769323"
-    // ou, sem ele, "Nome Contato Técnico" + "Telefone Contato Técnico".
-    const contato = emailField(lines, 'contato');
-    const tecnicoNome = emailField(lines, 'nome contato tecnico') || emailField(lines, 'nome do contato');
-    const tecnicoTel = emailField(lines, 'telefone contato tecnico') || emailField(lines, 'telefone do contato');
+    // Nome e telefone de quem recebe o técnico: juntos ("Contato para Agendar
+    // instalação: Franciele - 1532769323") ou separados ("Nome/Telefone Contato Técnico").
+    const contato = emailField(lines, 'contato', 'contato');
+    const contatoNome = emailField(lines, 'contatoNome', 'contato');
+    out.responsavel = contactName(contato) || contactName(contatoNome);
     let phones = phonesIn(contato);
-    if (!phones.length) phones = phonesIn(tecnicoTel);
+    if (!phones.length) phones = phonesIn(contatoNome + ' ' + emailField(lines, 'contatoTel', 'contato'));
     out.tel = phones.join(' / ');
-    out.responsavel = contato
-      .replace(new RegExp(PHONE_RE.source, 'g'), ' ')
-      .replace(/[\s\-–\/|,:]+$/, '')
-      .replace(/^[\s\-–\/|,:]+/, '')
-      .trim() || tecnicoNome;
 
+    // Normalmente preenchidos à mão: só sobrescreve se o e-mail trouxer.
+    ['plano_atual', 'complemento', 'horario'].forEach((key) => {
+      const value = emailField(lines, key);
+      if (value) out[key] = value;
+    });
     return out;
   }
 
@@ -391,7 +472,7 @@
     if (isPlano()) {
       const parsed = parseEmail($('f-sis').value);
       planoIds.forEach((id) => {
-        // Plano atual, ativo, complemento e horário não vêm do e-mail: não apaga o que foi digitado.
+        // Plano atual, ativo, complemento e horário só vêm se o e-mail trouxer: não apaga o que foi digitado.
         if (id in parsed) $('p-' + id).value = parsed[id];
       });
       render();
