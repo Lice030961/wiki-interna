@@ -111,12 +111,21 @@ def script_generator(request):
         'dedicado_options': [('nao', 'Não'), ('sim', 'Sim')],
         'gpon_options': ['UP', 'DOWN'],
         'tratativa_options': [
+            # Ordem: GPON UP/DOWN, só GPON UP, sem GPON.
             ('conexao', 'Conexão'),
-            ('navegacao', 'Navegação'),
             ('oscilacao', 'Oscilação'),
+            ('navegacao', 'Navegação'),
+            ('lentidao', 'Lentidão'),
             ('mudanca', 'Mudança de ponto'),
         ],
-        'obs_options': ['IGREJA', 'LIGAR ANTES DE IR AO LOCAL', 'REPASSE DE DROP', 'LOS VERMELHA'],
+        # (texto no script, rótulo do botão)
+        'obs_options': [
+            ('IGREJA', 'IGREJA'),
+            ('LIGAR ANTES DE IR AO LOCAL', 'LIGAR ANTES DE IR AO LOCAL'),
+            ('REPASSE DE DROP', 'REPASSE DE DROP'),
+            ('LOS VERMELHA', 'LOS VERMELHA'),
+            ('NECESSÁRIO LIBERAR TÉCNICO', 'LIBERAR TÉCNICO'),
+        ],
         'fields': [
             ('adm', 'ADM'),
             ('pppoe', 'PPPoE'),

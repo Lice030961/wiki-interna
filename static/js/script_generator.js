@@ -8,6 +8,7 @@
     conexao: 'SEM ACESSO',
     navegacao: 'SEM NAVEGAÇÃO',
     oscilacao: 'OSCILAÇÃO',
+    lentidao: 'LENTIDÃO',
     mudanca: 'MUDANÇA DE PONTO',
   };
   const ATIVO_RE = /\b[A-Z]{2}\d{6}\b/;
@@ -138,8 +139,8 @@
     const dedicado = selected('dedicado') === 'sim';
     const tratativa = selected('tratativa');
     const needsGpon = !dedicado && tratativa !== 'mudanca';
-    // Sem navegação = cliente conectado (GPON UP) mas não navega: GPON é sempre UP, sem perguntar.
-    const gponFixo = tratativa === 'navegacao';
+    // Sem navegação / lentidão = cliente conectado (GPON UP): GPON é sempre UP, sem perguntar.
+    const gponFixo = tratativa === 'navegacao' || tratativa === 'lentidao';
     const gpon = !needsGpon ? '' : gponFixo ? 'UP' : selected('gpon');
 
     $('gpon-group').classList.toggle('hidden', !needsGpon || gponFixo);

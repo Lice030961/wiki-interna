@@ -68,9 +68,9 @@
       <fieldset>
         <legend class="text-sm font-bold text-ink mb-2">Obs <span class="font-normal text-mute">(opcional)</span></legend>
         <div id="obs-presets" class="flex flex-wrap gap-2 mb-2">
-          {% for label in obs_options %}
+          {% for value, label in obs_options %}
           <label class="cursor-pointer">
-            <input type="checkbox" name="obs" value="{{ label }}" class="peer sr-only" />
+            <input type="checkbox" name="obs" value="{{ value }}" class="peer sr-only" />
             <span class="px-3 h-8 inline-flex items-center rounded-full border-2 border-hairline text-xs font-semibold text-body hover:border-brand-yellow peer-checked:border-brand-yellow peer-checked:bg-brand-yellow peer-checked:text-ink peer-focus-visible:ring-2 peer-focus-visible:ring-brand-yellow transition">{{ label }}</span>
           </label>
           {% endfor %}
