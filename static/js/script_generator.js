@@ -128,7 +128,7 @@
   // continuação da anterior.
   const EMAIL_LABELS = ['razao social', 'cnpj', 'adm', 'plano contratado', 'valor negociado',
     'taxa de instalacao', 'sla', 'endereco', 'quantidade de links', 'vigencia', 'contato',
-    'e-mail', 'precisa de roteador', 'obs'];
+    'e-mail', 'precisa de roteador', 'obs', 'nome', 'telefone', 'empresa'];
 
   function titleCase(s) {
     return s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
@@ -154,26 +154,55 @@
     return '';
   }
 
+  function phonesIn(value) {
+    const phones = [];
+    (value.match(new RegExp(PHONE_RE.source, 'g')) || []).forEach((m) => {
+      const digits = m.replace(/\D/g, '');
+      if (!phones.includes(digits)) phones.push(digits);
+    });
+    return phones;
+  }
+
+  // Quem enviou o e-mail (funcionário da Desktop), como "Nome Sobrenome".
+  // O remetente vem do primeiro "From:" (nome.sobrenome ou nome.<inicial>sobrenome,
+  // ex.: pedro.mcaxias). Procura no texto (assinatura, linha "… adicionou uma nota")
+  // um nome que case com ele; se não achar, monta a partir do próprio e-mail.
+  function findSolicitante(text, lines) {
+    const from = text.match(/^\s*From:\s*([\w.-]+)@/im);
+    if (!from) {
+      const nota = text.match(/^\s*(.+?)\s+adicionou uma nota/im);
+      const words = nota ? nota[1].trim().split(/\s+/) : [];
+      return titleCase(words.length > 1 ? words[0] + ' ' + words[words.length - 1] : words.join(''));
+    }
+    const parts = fold(from[1]).split(/[._-]+/).filter(Boolean);
+    const first = parts[0];
+    const rest = parts.slice(1).join('');
+    if (!rest) return titleCase(first);
+
+    for (const raw of lines) {
+      const line = raw.replace(/\s+adicionou uma nota.*$/i, '').trim();
+      if (!/^[A-Za-zÀ-ÿ' ]+$/.test(line)) continue;
+      const original = line.split(/\s+/);
+      const words = fold(line).split(/\s+/);
+      if (original.length < 2 || original.length > 6 || words[0] !== first) continue;
+      for (let i = 1; i < words.length; i++) {
+        // "reis" == "reis", ou "mcaxias" == "m" + "caxias" (inicial de um nome do meio).
+        const initialOk = words.slice(1, i).some((w) => w[0] + words[i] === rest);
+        if (words[i] === rest || initialOk) return titleCase(original[0] + ' ' + original[i]);
+      }
+    }
+    return titleCase(first + ' ' + rest);
+  }
+
   function parseEmail(text) {
     const lines = text.split(/\r?\n/).map((l) => l.normalize('NFC').trim());
     const out = {};
 
-    // Primeiro "ADM: <número>" do e-mail (assunto ou corpo), sem os zeros à esquerda.
-    const adm = text.match(/ADM:[ \t]*0*(\d+)/i);
+    // Primeiro "ADM: <número>" ou "ADM <número>" do e-mail (assunto ou corpo), sem os zeros à esquerda.
+    const adm = text.match(/\bADM\b[:# \t]*0*(\d{4,})/i);
     out.adm = adm ? adm[1] : '';
 
-    // Quem enviou (funcionário da Desktop), como "Nome Sobrenome". Vem de
-    // "<Nome completo> adicionou uma nota"; sem essa linha, do endereço em "From:".
-    let sender = '';
-    const nota = text.match(/^\s*(.+?)\s+adicionou uma nota/im);
-    if (nota) {
-      sender = nota[1];
-    } else {
-      const from = text.match(/^\s*From:\s*([\w.-]+)@/im);
-      if (from) sender = from[1].replace(/[._-]+/g, ' ');
-    }
-    const words = sender.trim().split(/\s+/).filter(Boolean);
-    out.solicitante = titleCase(words.length > 1 ? words[0] + ' ' + words[words.length - 1] : words.join(''));
+    out.solicitante = findSolicitante(text, lines);
 
     out.nome = emailField(lines, 'razao social');
     out.plano_novo = emailField(lines, 'plano contratado');
@@ -185,22 +214,28 @@
       .replace(/[.,]?\s*cep\s*:?\s*/i, ' - ')
       .trim();
 
+    // "Precisa de roteador? SIM/NÃO". Sem essa pergunta, "Instalação de Roteador" ou
+    // "+ Roteador" no texto indica SIM; senão fica vazio para preencher.
     const roteador = fold(emailField(lines, 'precisa de roteador'));
-    out.roteador = roteador.startsWith('s') ? 'SIM' : roteador.startsWith('n') ? 'NÃO' : '';
+    if (roteador) {
+      out.roteador = roteador.startsWith('s') ? 'SIM' : roteador.startsWith('n') ? 'NÃO' : '';
+    } else {
+      out.roteador = /(instala[çc][ãa]o de|\+)\s*roteador/i.test(text) ? 'SIM' : '';
+    }
 
-    // "Contato para Agendar instalação: Franciele - 1532769323": nome + telefone(s).
+    // Quem vai atender o técnico: "Contato para Agendar instalação: Franciele - 1532769323"
+    // ou, sem ele, "Nome Contato Técnico" + "Telefone Contato Técnico".
     const contato = emailField(lines, 'contato');
-    const phones = [];
-    (contato.match(new RegExp(PHONE_RE.source, 'g')) || []).forEach((m) => {
-      const digits = m.replace(/\D/g, '');
-      if (!phones.includes(digits)) phones.push(digits);
-    });
+    const tecnicoNome = emailField(lines, 'nome contato tecnico') || emailField(lines, 'nome do contato');
+    const tecnicoTel = emailField(lines, 'telefone contato tecnico') || emailField(lines, 'telefone do contato');
+    let phones = phonesIn(contato);
+    if (!phones.length) phones = phonesIn(tecnicoTel);
     out.tel = phones.join(' / ');
     out.responsavel = contato
       .replace(new RegExp(PHONE_RE.source, 'g'), ' ')
       .replace(/[\s\-–\/|,:]+$/, '')
       .replace(/^[\s\-–\/|,:]+/, '')
-      .trim();
+      .trim() || tecnicoNome;
 
     out.ativo = '-';
     return out;
