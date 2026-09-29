@@ -22,7 +22,7 @@
   const planoIds = ['adm', 'solicitante', 'nome', 'plano_atual', 'plano_novo', 'roteador', 'ativo',
     'endereco', 'complemento', 'horario', 'responsavel', 'tel'];
   // Podem ficar vazios: têm valor padrão ou são preenchidos à mão só quando existem.
-  const planoOpcionais = ['ativo', 'complemento', 'horario', 'responsavel'];
+  const planoOpcionais = ['complemento', 'horario', 'responsavel'];
 
   // Remove acentos preservando o tamanho da string, para os índices baterem com o original.
   function fold(s) {
@@ -237,7 +237,6 @@
       .replace(/^[\s\-–\/|,:]+/, '')
       .trim() || tecnicoNome;
 
-    out.ativo = '-';
     return out;
   }
 
@@ -307,7 +306,7 @@
       '',
       'Nome da Empresa: ' + v.nome,
       'ADM: ' + v.adm,
-      'Ativo do equipamento: ' + (v.ativo || '-'),
+      'Ativo do equipamento: ' + v.ativo,
       '',
       'Plano atual: ' + v.plano_atual,
       'Plano novo: ' + v.plano_novo,
@@ -322,7 +321,10 @@
       'SOLICITAÇÃO: ' + SOLICITACAO.plano,
     ].join('\n');
 
-    $('pending').textContent = v.plano_atual ? '' : 'Falta: plano atual';
+    const pending = [];
+    if (!v.plano_atual) pending.push('plano atual');
+    if (!v.ativo) pending.push('ativo');
+    $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 
   function render() {
@@ -389,7 +391,7 @@
     if (isPlano()) {
       const parsed = parseEmail($('f-sis').value);
       planoIds.forEach((id) => {
-        // Plano atual, complemento e horário não vêm do e-mail: não apaga o que foi digitado.
+        // Plano atual, ativo, complemento e horário não vêm do e-mail: não apaga o que foi digitado.
         if (id in parsed) $('p-' + id).value = parsed[id];
       });
       render();

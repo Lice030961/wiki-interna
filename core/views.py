@@ -144,14 +144,14 @@ def script_generator(request):
             ('solicitante', 'Quem solicitou (Desktop)'),
             ('nome', 'Nome da Empresa'),
             ('plano_atual', 'Plano atual'),
+            ('ativo', 'Ativo do equipamento'),
             ('plano_novo', 'Plano novo'),
             ('roteador', 'Roteador desbloqueado'),
-            ('ativo', 'Ativo do equipamento'),
+            ('tel', 'Contato'),
             ('endereco', 'Endereço'),
             ('complemento', 'Complemento'),
             ('horario', 'Horário de atendimento'),
             ('responsavel', 'Responsável'),
-            ('tel', 'Contato'),
         ],
     })
 
