@@ -15,8 +15,8 @@
     <p id="intro-sis" class="text-sm text-body/80 mt-1">
       No SIS, abra a ficha do cliente, clique em <strong>Mostrar</strong> nos Ativos, dê Ctrl+A, Ctrl+C e cole abaixo.
     </p>
-    <p id="intro-plano" class="hidden text-sm text-body/80 mt-1">
-      Abra o e-mail da solicitação de mudança de plano, dê Ctrl+A, Ctrl+C e cole abaixo.
+    <p id="intro-email" class="hidden text-sm text-body/80 mt-1">
+      Abra o e-mail da solicitação de <span id="intro-email-tipo">mudança de plano</span>, dê Ctrl+A, Ctrl+C e cole abaixo.
     </p>
   </div>
 
@@ -54,6 +54,22 @@
             {% endfor %}
           </div>
         </fieldset>
+      </div>
+
+      <div id="equip-row" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {% for name, legend in equip_groups %}
+        <fieldset>
+          <legend class="text-sm font-bold text-ink mb-2">{{ legend }}</legend>
+          <div class="flex gap-2">
+            {% for value, label in dedicado_options %}
+            <label class="cursor-pointer">
+              <input type="radio" name="{{ name }}" value="{{ value }}" class="peer sr-only" {% if value == 'nao' %}checked{% endif %} />
+              <span class="px-4 h-10 inline-flex items-center rounded-full border-2 border-brand-red text-sm font-semibold text-ink hover:border-brand-yellow peer-checked:border-brand-red peer-checked:bg-brand-red peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand-yellow transition">{{ label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
       </div>
 
       <fieldset>
@@ -106,13 +122,13 @@
         </div>
         <div id="fields-plano" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
           {% for id, label in plano_fields %}
-          <div class="{% if id == 'nome' or id == 'plano_novo' or id == 'endereco' or id == 'complemento' %}sm:col-span-2{% endif %}">
+          <div data-field="{{ id }}" class="{% if id == 'nome' or id == 'plano_novo' or id == 'endereco' or id == 'complemento' %}sm:col-span-2{% endif %}">
             <label for="p-{{ id }}" class="block text-xs font-semibold text-mute mb-1">{{ label }}</label>
             <input id="p-{{ id }}" type="text" autocomplete="off"
                    {% if id == 'horario' %}placeholder="Administrativo"{% endif %}
                    {% if id == 'responsavel' %}placeholder="Quem estiver no local"{% endif %}
                    {% if id == 'solicitante' %}placeholder="Nome Sobrenome"{% endif %}
-                   {% if id == 'adm' %}inputmode="numeric"{% endif %}
+                   {% if id == 'adm' or id == 'prospect' %}inputmode="numeric"{% endif %}
                    class="sg-input h-10 w-full px-4 rounded-2xl border-2 border-hairline bg-white text-sm text-ink placeholder-ash focus:outline-none focus:border-brand-yellow transition" />
           </div>
           {% endfor %}
@@ -148,5 +164,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/script_generator.js' %}"></script>
+<script src="{% static 'js/script_generator.js' %}?v={{ js_version }}"></script>
 {% endblock %}

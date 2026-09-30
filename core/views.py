@@ -1,8 +1,10 @@
+import os
 import re
 import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.staticfiles import finders
 from django.http import JsonResponse
 from django.utils.text import slugify
 from django.utils.html import escape
@@ -107,9 +109,14 @@ def home(request):
 def script_generator(request):
     # Toda a extração roda no navegador (static/js/script_generator.js);
     # o texto colado do SIS nunca chega ao servidor.
+    # Versão do JS na URL: o navegador nunca roda um script antigo do cache com a página nova.
+    js_path = finders.find('js/script_generator.js')
     return render(request, 'tools/script_generator.html', {
+        'js_version': int(os.path.getmtime(js_path)) if js_path else 0,
         'dedicado_options': [('nao', 'Não'), ('sim', 'Sim')],
         'gpon_options': ['UP', 'DOWN'],
+        # Só na Mudança de plano e na Instalação (Sim/Não, padrão Não).
+        'equip_groups': [('roteador', 'Roteador?'), ('rb', 'RB?'), ('ata', 'ATA?')],
         'tratativa_options': [
             # Ordem: GPON UP/DOWN, só GPON UP, sem GPON.
             ('conexao', 'Conexão'),
@@ -117,8 +124,9 @@ def script_generator(request):
             ('navegacao', 'Navegação'),
             ('lentidao', 'Lentidão'),
             ('mudanca', 'Mudança de ponto'),
-            # Mudança de plano troca o modelo do script: dados vêm do e-mail, não do SIS.
+            # Mudança de plano e Instalação trocam o modelo do script: dados vêm do e-mail, não do SIS.
             ('plano', 'Mudança de plano'),
+            ('instalacao', 'Instalação'),
         ],
         # (texto no script, rótulo do botão)
         'obs_options': [
@@ -146,7 +154,7 @@ def script_generator(request):
             ('plano_atual', 'Plano atual'),
             ('ativo', 'Ativo do equipamento'),
             ('plano_novo', 'Plano novo'),
-            ('roteador', 'Roteador desbloqueado'),
+            ('prospect', 'Prospect'),
             ('tel', 'Contato'),
             ('endereco', 'Endereço'),
             ('complemento', 'Complemento'),

@@ -1,5 +1,5 @@
 // Gerador de Script de SA — roda 100% no navegador. O texto colado (ficha do SIS
-// ou e-mail de mudança de plano) nunca é enviado ao servidor nem salvo.
+// ou e-mail de mudança de plano/instalação) nunca é enviado ao servidor nem salvo.
 (function () {
   // PPPoE desse domínio (plano não legado) é encurtado até o "@".
   const SHORT_PPPOE_DOMAIN = 'desktop.com.br';
@@ -11,18 +11,25 @@
     lentidao: 'LENTIDÃO',
     mudanca: 'MUDANÇA DE PONTO',
     plano: 'Mudança de plano',
+    instalacao: 'Instalação',
   };
+  // Com um telefone só, a Obs "ligar antes" já leva o número.
+  const OBS_LIGAR = 'LIGAR ANTES DE IR AO LOCAL';
   const SOLICITANTE_SUFIXO = ' - B2B Desktop';
   const ATIVO_RE = /\b[A-Z]{2}\d{6}\b/;
   const PHONE_RE = /\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/;
 
   const $ = (id) => document.getElementById(id);
   const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'endereco', 'responsavel', 'tel'];
-  // Campos do modo Mudança de plano (ids "p-..."), preenchidos a partir do e-mail.
-  const planoIds = ['adm', 'solicitante', 'nome', 'plano_atual', 'plano_novo', 'roteador', 'ativo',
-    'endereco', 'complemento', 'horario', 'responsavel', 'tel'];
+  // Tratativas cujo texto colado é o e-mail da solicitação (campos "p-...") e os campos de cada uma.
+  const EMAIL_MODES = {
+    plano: ['adm', 'solicitante', 'nome', 'plano_atual', 'ativo', 'plano_novo', 'tel',
+      'endereco', 'complemento', 'horario', 'responsavel'],
+    instalacao: ['nome', 'plano_novo', 'prospect', 'tel', 'endereco', 'complemento', 'horario', 'responsavel'],
+  };
+  const emailIds = [...new Set(Object.values(EMAIL_MODES).flat())];
   // Podem ficar vazios: têm valor padrão ou são preenchidos à mão só quando existem.
-  const planoOpcionais = ['complemento', 'horario', 'responsavel'];
+  const emailOpcionais = ['complemento', 'horario', 'responsavel'];
 
   // Remove acentos preservando o tamanho da string, para os índices baterem com o original.
   function fold(s) {
@@ -123,7 +130,7 @@
     return out;
   }
 
-  // ── E-mail de mudança de plano ──────────────────────────────────────────────
+  // ── E-mail (mudança de plano / instalação) ──────────────────────────────────
   // Diferente da ficha do SIS, o e-mail não tem formato fixo: vem de pessoas
   // diferentes, às vezes encaminhado, com rótulos variados. Cada campo aceita
   // vários rótulos (regex sobre a linha sem acento e minúscula, sempre no começo
@@ -136,7 +143,7 @@
     endereco: ['endereco( completo)?( d[aeo])?( (instalacao|ativacao))?'],
     complemento: ['complemento'],
     horario: ['horario( de (atendimento|funcionamento))?'],
-    roteador: ['precisa( d[eo])? roteador', 'roteador(?=\\s*[:?])'],
+    prospect: ['(n[º°o.]?\\s*(d[oa]\\s*)?)?prospect'],
     // Quem vai receber o técnico no local (não quem enviou o e-mail), em ordem de preferência.
     contato: ['contato para agendar( a)?( instalacao)?', 'contato( no)? local', 'contato tecnico',
       'responsavel( no local| tecnico| pelo local)?', 'contato(?=\\s*:)'],
@@ -149,7 +156,7 @@
     emailRes[key] = EMAIL_FIELDS[key].map((p) => new RegExp('^(' + p + ')' + EMAIL_SEP));
   });
   // Outros rótulos comuns do e-mail: uma linha que começa com eles nunca é continuação da anterior.
-  const EMAIL_LABELS_RE = /^(cnpj|valor|taxa|sla|quantidade|qtde|vigencia|contrato|e-?mail|obs|empresa|telefone|nome|mailto|instalacao|att|grato)\b/;
+  const EMAIL_LABELS_RE = /^(cnpj|valor|taxa|sla|quantidade|qtde|vigencia|contrato|e-?mail|obs|empresa|telefone|nome|mailto|instalacao|att|grato|precisa|roteador|ata)\b/;
   // Caixas de e-mail da Desktop que não são pessoas.
   const GENERIC_MAILBOXES = ['premium', 'operacoes', 'suporte', 'analises', 'noc', 'comercial', 'financeiro', 'atendimento'];
   const HEADER_RE = /^\s*(from|de|enviad[oa] por|remetente)\s*:/i;
@@ -277,18 +284,6 @@
     return titleCase(first + ' ' + rest);
   }
 
-  // "Precisa de roteador? SIM/NÃO"; sem essa pergunta, procura no texto
-  // ("sem roteador", "+ Roteador", "considerar roteador", "precisa do roteador"...).
-  function findRoteador(text, lines) {
-    const answer = fold(emailField(lines, 'roteador'));
-    if (answer.startsWith('s')) return 'SIM';
-    if (answer.startsWith('n')) return 'NÃO';
-    const t = fold(text);
-    if (/(sem|nao (precisa|necessita)( d[eo])?|ja (possui|tem))\s+(o\s+|um\s+)?roteador/.test(t)) return 'NÃO';
-    if (/(instalacao d[eo]|\+|precisa( d[eo])?|necessita( d[eo])?|considerar|enviar|mandar|incluir|com)\s+(o\s+|um\s+)?roteador/.test(t)) return 'SIM';
-    return '';
-  }
-
   function parseEmail(text) {
     const lines = text.split(/\r?\n/).map((l) => l.normalize('NFC').trim());
     const out = {};
@@ -302,7 +297,8 @@
     out.nome = emailField(lines, 'nome');
     out.plano_novo = emailField(lines, 'plano_novo');
     out.endereco = formatEndereco(emailField(lines, 'endereco', 'endereco'));
-    out.roteador = findRoteador(text, lines);
+    const prospect = emailField(lines, 'prospect').match(/\d+/);
+    out.prospect = prospect ? prospect[0] : '';
 
     // Nome e telefone de quem recebe o técnico: juntos ("Contato para Agendar
     // instalação: Franciele - 1532769323") ou separados ("Nome/Telefone Contato Técnico").
@@ -333,8 +329,11 @@
     return s;
   }
 
-  function buildObs() {
-    const parts = Array.from(document.querySelectorAll('input[name="obs"]:checked')).map((el) => el.value);
+  function buildObs(tel) {
+    const phones = tel.split('/').map((t) => t.trim()).filter(Boolean);
+    const parts = Array.from(document.querySelectorAll('input[name="obs"]:checked')).map((el) => (
+      el.value === OBS_LIGAR && phones.length === 1 ? el.value + ' - ' + phones[0] : el.value
+    ));
     const extra = $('f-obs').value.trim();
     if (extra) parts.push(extra);
     return parts.join(' / ');
@@ -350,67 +349,107 @@
     el.classList.toggle('!bg-brand-yellow/10', missing);
   }
 
-  function isPlano() {
-    return selected('tratativa') === 'plano';
+  // 'plano' / 'instalacao' quando o texto colado é um e-mail; '' para a ficha do SIS.
+  function emailMode() {
+    const t = selected('tratativa');
+    return t in EMAIL_MODES ? t : '';
   }
 
-  function setMode(plano) {
-    $('fields-sis').classList.toggle('hidden', plano);
-    $('fields-plano').classList.toggle('hidden', !plano);
-    $('gpon-row').classList.toggle('hidden', plano);
-    $('intro-sis').classList.toggle('hidden', plano);
-    $('intro-plano').classList.toggle('hidden', !plano);
-    $('sis-label').textContent = plano ? 'Texto do e-mail' : 'Texto da página do SIS';
-    $('f-sis').placeholder = plano ? 'Cole aqui o conteúdo do e-mail da solicitação...' : 'Cole aqui o conteúdo da ficha do cliente...';
+  function setMode(mode) {
+    const email = !!mode;
+    $('fields-sis').classList.toggle('hidden', email);
+    $('fields-plano').classList.toggle('hidden', !email);
+    $('gpon-row').classList.toggle('hidden', email);
+    $('equip-row').classList.toggle('hidden', !email);
+    $('intro-sis').classList.toggle('hidden', email);
+    $('intro-email').classList.toggle('hidden', !email);
+    $('intro-email-tipo').textContent = mode === 'instalacao' ? 'instalação' : 'mudança de plano';
+    $('sis-label').textContent = email ? 'Texto do e-mail' : 'Texto da página do SIS';
+    $('f-sis').placeholder = email ? 'Cole aqui o conteúdo do e-mail da solicitação...' : 'Cole aqui o conteúdo da ficha do cliente...';
+    if (!email) return;
+    document.querySelectorAll('#fields-plano [data-field]').forEach((el) => {
+      el.classList.toggle('hidden', !EMAIL_MODES[mode].includes(el.dataset.field));
+    });
+    document.querySelector('label[for="p-plano_novo"]').textContent = mode === 'instalacao' ? 'Plano' : 'Plano novo';
   }
 
-  function renderPlano() {
-    // Na mudança de plano as Obs padrão valem sempre (não há "cliente dedicado").
+  function renderEmail(mode) {
+    // Aqui as Obs padrão valem sempre (não há "cliente dedicado").
     $('obs-presets').classList.remove('hidden');
 
     const v = {};
-    planoIds.forEach((id) => {
+    EMAIL_MODES[mode].forEach((id) => {
       const el = $('p-' + id);
       v[id] = el.value.trim();
-      markMissing(el, !v[id] && !planoOpcionais.includes(id));
+      markMissing(el, !v[id] && !emailOpcionais.includes(id));
     });
-
-    const obs = buildObs();
-    $('preview').value = [
-      'ATENDIMENTO PREMIUM',
-      '',
-      'Obs:' + (obs ? ' ' + obs : ''),
-      '',
-      'Roteador desbloqueado: ' + v.roteador,
-      '',
-      'Nome de quem solicitou a VT: ' + (v.solicitante ? v.solicitante + SOLICITANTE_SUFIXO : ''),
-      '',
-      'Nome da Empresa: ' + v.nome,
-      'ADM: ' + v.adm,
-      'Ativo do equipamento: ' + v.ativo,
-      '',
-      'Plano atual: ' + v.plano_atual,
-      'Plano novo: ' + v.plano_novo,
-      '',
-      'Endereço: ' + v.endereco,
-      'Complemento: ' + v.complemento,
-      '',
-      'Horário de atendimento: ' + (v.horario || 'Administrativo'),
-      'Responsável: ' + (v.responsavel || DEFAULT_RESPONSAVEL),
-      'Contato: ' + phoneLines(v.tel),
-      '',
-      'SOLICITAÇÃO: ' + SOLICITACAO.plano,
-    ].join('\n');
-
+    const simNao = (name) => (selected(name) === 'sim' ? 'SIM' : 'NÃO');
+    const obs = buildObs(v.tel);
     const pending = [];
-    if (!v.plano_atual) pending.push('plano atual');
-    if (!v.ativo) pending.push('ativo');
+
+    if (mode === 'instalacao') {
+      $('preview').value = [
+        'ATENDIMENTO PREMIUM',
+        '',
+        'Obs:' + (obs ? ' ' + obs : ''),
+        '',
+        'Tipo de instalação: ',
+        'Roteador desbloqueado: ' + simNao('roteador'),
+        'Necessidade de RB: ' + simNao('rb'),
+        'Necessidade de ATA: ' + simNao('ata'),
+        '',
+        'Nome da Empresa: ' + v.nome,
+        'Plano: ' + v.plano_novo,
+        'Prospect: ' + v.prospect,
+        '',
+        'Endereço: ' + v.endereco,
+        'Complemento: ' + v.complemento,
+        '',
+        'Horario de atendimento: ' + (v.horario || 'Administrativo'),
+        'Responsavel: ' + (v.responsavel || DEFAULT_RESPONSAVEL),
+        'CONTATO: ' + phoneLines(v.tel),
+        '',
+        'SOLICITAÇÃO: ' + SOLICITACAO.instalacao,
+      ].join('\n');
+      if (!v.prospect) pending.push('prospect');
+    } else {
+      $('preview').value = [
+        'ATENDIMENTO PREMIUM',
+        '',
+        'Obs:' + (obs ? ' ' + obs : ''),
+        '',
+        'Roteador desbloqueado: ' + simNao('roteador'),
+        'Necessidade de RB: ' + simNao('rb'),
+        'Necessidade de ATA: ' + simNao('ata'),
+        '',
+        'Nome de quem solicitou a VT: ' + (v.solicitante ? v.solicitante + SOLICITANTE_SUFIXO : ''),
+        '',
+        'Nome da Empresa: ' + v.nome,
+        'ADM: ' + v.adm,
+        'Ativo do equipamento: ' + v.ativo,
+        'Plano atual: ' + v.plano_atual,
+        'Plano novo: ' + v.plano_novo,
+        '',
+        'Endereço: ' + v.endereco,
+        'Complemento: ' + v.complemento,
+        '',
+        'Horário de atendimento: ' + (v.horario || 'Administrativo'),
+        '',
+        'Responsável: ' + (v.responsavel || DEFAULT_RESPONSAVEL),
+        'Contato: ' + phoneLines(v.tel),
+        '',
+        'SOLICITAÇÃO: ' + SOLICITACAO.plano,
+      ].join('\n');
+      if (!v.plano_atual) pending.push('plano atual');
+      if (!v.ativo) pending.push('ativo');
+    }
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 
   function render() {
-    if (isPlano()) {
-      renderPlano();
+    const mode = emailMode();
+    if (mode) {
+      renderEmail(mode);
       return;
     }
     const dedicado = selected('dedicado') === 'sim';
@@ -436,7 +475,7 @@
       markMissing(el, !el.disabled && !el.value.trim() && id !== 'responsavel');
     });
 
-    const obs = buildObs();
+    const obs = buildObs(v.tel);
     $('preview').value = [
       'ATENDIMENTO PREMIUM',
       '',
@@ -469,9 +508,9 @@
   let sisEndereco = '';
 
   function reparse() {
-    if (isPlano()) {
+    if (emailMode()) {
       const parsed = parseEmail($('f-sis').value);
-      planoIds.forEach((id) => {
+      emailIds.forEach((id) => {
         // Plano atual, ativo, complemento e horário só vêm se o e-mail trouxer: não apaga o que foi digitado.
         if (id in parsed) $('p-' + id).value = parsed[id];
       });
@@ -505,31 +544,50 @@
     setTimeout(() => { btn.textContent = original; }, 1500);
   }
 
-  function clearAll() {
-    ['f-adm', 'f-sis', 'f-obs'].forEach((id) => { $(id).value = ''; });
-    planoIds.forEach((id) => { $('p-' + id).value = ''; });
-    $('f-adm').dataset.auto = '1';
-    $('f-horario').value = '';
-    document.querySelectorAll('input[name="tratativa"], input[name="gpon"], input[name="obs"]').forEach((r) => { r.checked = false; });
-    document.querySelector('input[name="dedicado"][value="nao"]').checked = true;
-    $('keep-endereco').checked = true;
-    modoPlano = false;
-    setMode(false);
+  // Modo atual ('' = SIS, 'plano', 'instalacao'); null até a primeira sincronização.
+  // A ficha do SIS e o e-mail usam a mesma caixa de texto, mas cada um guarda o seu
+  // texto: trocar de tratativa nunca lê a ficha como e-mail (nem o contrário).
+  // Plano e Instalação compartilham o mesmo e-mail.
+  let modo = null;
+  const texts = { sis: '', email: '' };
+  const kindOf = (mode) => (mode ? 'email' : 'sis');
+
+  // Aplica a tratativa marcada: troca modelo, campos e texto se o modo mudou.
+  // Também roda ao abrir a página, já que o navegador pode restaurar botões e texto.
+  function syncMode() {
+    const mode = emailMode();
+    if (mode === modo) return false;
+    if (modo !== null && kindOf(mode) !== kindOf(modo)) {
+      texts[kindOf(modo)] = $('f-sis').value;
+      $('f-sis').value = texts[kindOf(mode)];
+    }
+    modo = mode;
+    setMode(mode);
     reparse();
+    return true;
+  }
+
+  function clearAll() {
+    texts.sis = '';
+    texts.email = '';
+    ['f-adm', 'f-sis', 'f-obs', 'f-horario'].forEach((id) => { $(id).value = ''; });
+    emailIds.forEach((id) => { $('p-' + id).value = ''; });
+    $('f-adm').dataset.auto = '1';
+    document.querySelectorAll('input[name="tratativa"], input[name="gpon"], input[name="obs"]').forEach((r) => { r.checked = false; });
+    ['dedicado', 'roteador', 'rb', 'ata'].forEach((name) => {
+      document.querySelector('input[name="' + name + '"][value="nao"]').checked = true;
+    });
+    $('keep-endereco').checked = true;
+    if (!syncMode()) reparse();
     $('f-sis').focus();
   }
 
   $('f-sis').addEventListener('input', reparse);
-  $('f-adm').addEventListener('input', () => { $('f-adm').dataset.auto = ''; render(); });
+  $('f-adm').addEventListener('input', () => { $('f-adm').dataset.auto = ''; });
   document.querySelectorAll('.sg-input').forEach((el) => el.addEventListener('input', render));
-  document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach((el) => el.addEventListener('change', render));
-  // Entrar ou sair da Mudança de plano troca o modelo e relê o texto colado.
-  let modoPlano = false;
-  document.querySelectorAll('input[name="tratativa"]').forEach((el) => el.addEventListener('change', () => {
-    if (isPlano() === modoPlano) return;
-    modoPlano = isPlano();
-    setMode(modoPlano);
-    reparse();
+  // Um único fluxo para todos os botões: troca de modo (se houver) ou só redesenha o script.
+  document.querySelectorAll('input[type="radio"], input[name="obs"]').forEach((el) => el.addEventListener('change', () => {
+    if (!syncMode()) render();
   }));
   $('keep-endereco').addEventListener('change', (e) => {
     $('f-endereco').value = e.target.checked ? sisEndereco : '';
@@ -539,5 +597,5 @@
   $('copy-btn').addEventListener('click', copy);
   $('clear-btn').addEventListener('click', clearAll);
 
-  render();
+  syncMode();
 })();
