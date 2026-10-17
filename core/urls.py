@@ -51,4 +51,12 @@ urlpatterns = [
     path('admin-wiki/glossario/salvar/', views.admin_glossary_save, name='admin_glossary_save'),
     path('admin-wiki/glossario/lista/', views.admin_glossary_list, name='admin_glossary_list'),
     path('admin-wiki/glossario/<int:term_id>/excluir/', views.admin_glossary_delete, name='admin_glossary_delete'),
+
+    # OLTs (compatibilidade do Gerador de Script SA)
+    path('admin-wiki/olts/', views.admin_olts, name='admin_olts'),
+    path('admin-wiki/olts/importar/', views.admin_olt_import, name='admin_olt_import'),
+    path('admin-wiki/olts/criar/', views.admin_olt_create, name='admin_olt_create'),
+    path('admin-wiki/olts/<int:olt_id>/editar/', views.admin_olt_edit, name='admin_olt_edit'),
+    path('admin-wiki/olts/<int:olt_id>/excluir/', views.admin_olt_delete, name='admin_olt_delete'),
+    path('admin-wiki/olts/fabricante/<int:fabricante_id>/salvar/', views.admin_fabricante_save, name='admin_fabricante_save'),
 ]

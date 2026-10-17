@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} OLT{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-10">
+  <div class="mb-6">
+    <a href="{% url 'admin_olts' %}" class="text-sm text-brand-red hover:underline">&larr; Voltar</a>
+  </div>
+
+  <h1 class="text-[28px] font-bold text-ink mb-8 tracking-[-1.2px]">{{ action }} OLT</h1>
+
+  <form method="post" class="space-y-5 bg-white border-2 border-brand-red rounded-2xl p-6">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-semibold text-body mb-1">Nome (hostname) <span class="text-brand-red">*</span></label>
+      <input type="text" name="nome" required autofocus value="{{ obj.nome|default:'' }}" placeholder="LT-G01-ABC001-SP"
+             class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm font-mono placeholder-ash focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-body mb-1">Fabricante <span class="text-brand-red">*</span></label>
+        <select name="fabricante" required
+                class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-yellow">
+          {% for fab in fabricantes %}
+          <option value="{{ fab.id }}" {% if obj.fabricante_id == fab.id %}selected{% endif %}>{{ fab.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-body mb-1">Modelo</label>
+        <input type="text" name="modelo" value="{{ obj.modelo|default:'' }}"
+               class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-4">
+      <div class="col-span-2">
+        <label class="block text-sm font-semibold text-body mb-1">Cidade <span class="text-brand-red">*</span></label>
+        <input type="text" name="cidade" required value="{{ obj.cidade|default:'' }}"
+               class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-body mb-1">Sigla</label>
+        <input type="text" name="sigla" value="{{ obj.sigla|default:'' }}"
+               class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-semibold text-body mb-1">Site</label>
+      <input type="text" name="site" value="{{ obj.site|default:'' }}"
+             class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+    </div>
+    <div>
+      <label class="block text-sm font-semibold text-body mb-1">Endereço</label>
+      <input type="text" name="endereco" value="{{ obj.endereco|default:'' }}"
+             class="w-full border border-hairline rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+    </div>
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+              class="bg-brand-red text-white font-bold px-6 py-2.5 rounded-2xl hover:bg-brand-redhov transition text-sm">
+        Salvar
+      </button>
+      <a href="{% url 'admin_olts' %}"
+         class="border border-hairline text-body px-6 py-2.5 rounded-2xl hover:bg-card transition text-sm font-medium">
+        Cancelar
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

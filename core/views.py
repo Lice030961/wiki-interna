@@ -1,17 +1,23 @@
 import os
 import re
+import io
+import csv
 import json
+import unicodedata
+from collections import Counter, defaultdict
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.staticfiles import finders
+from django.contrib import messages
+from django.db import transaction
 from django.http import JsonResponse
 from django.utils.text import slugify
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.db.models import Q
 
-from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade
+from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade, FabricanteOLT, OLT
 from . import chatbot
 from .tools import search_tools
 
@@ -113,6 +119,7 @@ def script_generator(request):
     js_path = finders.find('js/script_generator.js')
     return render(request, 'tools/script_generator.html', {
         'js_version': int(os.path.getmtime(js_path)) if js_path else 0,
+        'olt_data': olt_data(),
         'dedicado_options': [('nao', 'Não'), ('sim', 'Sim')],
         'gpon_options': ['UP', 'DOWN'],
         # Só na Mudança de plano e na Instalação (Sim/Não, padrão Não).
@@ -142,6 +149,7 @@ def script_generator(request):
             ('nome', 'Nome da Empresa'),
             ('plano', 'Plano'),
             ('ativo', 'Ativo do equipamento'),
+            ('compat', 'Compatibilidade'),
             ('tel', 'Tel'),
             ('endereco', 'Endereço'),
             ('horario', 'Horário de atendimento'),
@@ -155,6 +163,7 @@ def script_generator(request):
             ('ativo', 'Ativo do equipamento'),
             ('plano_novo', 'Plano novo'),
             ('prospect', 'Prospect'),
+            ('compat', 'Compatibilidade'),
             ('tel', 'Contato'),
             ('endereco', 'Endereço'),
             ('complemento', 'Complemento'),
@@ -162,6 +171,41 @@ def script_generator(request):
             ('responsavel', 'Responsável'),
         ],
     })
+
+
+def city_key(name):
+    name = unicodedata.normalize('NFKD', name or '').encode('ascii', 'ignore').decode().lower()
+    name = re.sub(r"['`´’]", '', name)
+    return ' '.join(re.sub(r'[^a-z0-9]+', ' ', name).split())
+
+
+def olt_data():
+    """OLTs para o Gerador achar a Compatibilidade no navegador: por hostname (SIS),
+    pela sigla do hostname e pela cidade (endereço do e-mail/prospect). Os fabricantes
+    de cada cidade/sigla vão do que tem mais OLTs para o que tem menos."""
+    by_host, by_city, by_sigla, city_names = {}, defaultdict(Counter), defaultdict(Counter), {}
+    for olt in OLT.objects.select_related('fabricante'):
+        fab = olt.fabricante.nome
+        by_host[olt.nome.upper()] = fab
+        # Mesma chave que cityKey() no JS: o CSV tem "Jacarei" e "Jacareí", "d'Oeste" e "dOeste"...
+        key = city_key(olt.cidade)
+        if key:
+            by_city[key][fab] += 1
+            # Entre "Sumare" e "Sumaré", mostra a grafia com acento.
+            if sum(ord(ch) > 127 for ch in olt.cidade) > sum(ord(ch) > 127 for ch in city_names.get(key, '')):
+                city_names[key] = olt.cidade
+            city_names.setdefault(key, olt.cidade)
+        m = re.match(r'LT-G\d+-([A-Z]+)\d*-', olt.nome.upper())
+        sigla = m.group(1) if m else re.sub(r'\d+', '', olt.sigla.upper())
+        if sigla:
+            by_sigla[sigla][fab] += 1
+    order = lambda counter: [fab for fab, _ in counter.most_common()]
+    return {
+        'fabricantes': {f.nome: {'onu': f.onu, 'aviso': f.aviso} for f in FabricanteOLT.objects.all()},
+        'olts': by_host,
+        'cidades': {key: {'nome': city_names[key], 'fabs': order(c)} for key, c in by_city.items()},
+        'siglas': {sigla: order(c) for sigla, c in by_sigla.items()},
+    }
 
 
 def batimento(request):
@@ -702,3 +746,139 @@ def admin_cidade_delete(request, cidade_id):
         cidade.delete()
         return redirect('admin_regionais')
     return render(request, 'admin/confirm_delete.html', {'object': cidade, 'type': 'cidade'})
+
+
+# ── Admin: OLTs (compatibilidade do Gerador de Script SA) ─────────────────────
+
+# Colunas do CSV (cabeçalho sem acento/maiúscula) → campo do model.
+OLT_CSV_COLUMNS = {
+    'NOME OLT': 'nome', 'FABRICANTE': 'fabricante', 'MODELO': 'modelo', 'CIDADE': 'cidade',
+    'SIGLA': 'sigla', 'SITE': 'site', 'ENDERECO': 'endereco',
+}
+
+
+def _csv_header(name):
+    name = unicodedata.normalize('NFKD', name or '').encode('ascii', 'ignore').decode()
+    return ' '.join(name.upper().split())
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_olts(request):
+    olts = list(OLT.objects.select_related('fabricante'))
+    por_cidade = defaultdict(list)
+    for olt in olts:
+        por_cidade[olt.cidade].append(olt)
+    cidades = []
+    for cidade, lista in sorted(por_cidade.items(), key=lambda kv: _csv_header(kv[0])):
+        fabs = Counter(o.fabricante.nome for o in lista)
+        cidades.append({'nome': cidade, 'olts': lista, 'fabricantes': fabs.most_common()})
+    return render(request, 'admin/olts.html', {
+        'fabricantes': FabricanteOLT.objects.all(),
+        'cidades': cidades,
+        'total': len(olts),
+        'mistas': sum(1 for c in cidades if len(c['fabricantes']) > 1),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_olt_import(request):
+    """Substitui todas as OLTs pelas do CSV (colunas NOME OLT, FABRICANTE, CIDADE e,
+    opcionais, MODELO, SIGLA, SITE, ENDEREÇO). Fabricante novo é criado com ONU "?"."""
+    if request.method != 'POST' or not request.FILES.get('arquivo'):
+        return redirect('admin_olts')
+    raw = request.FILES['arquivo'].read()
+    try:
+        text = raw.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        text = raw.decode('latin-1')
+    first = text.split('\n', 1)[0]
+    reader = csv.DictReader(io.StringIO(text), delimiter=';' if first.count(';') > first.count(',') else ',')
+    reader.fieldnames = [OLT_CSV_COLUMNS.get(_csv_header(h), h) for h in reader.fieldnames or []]
+    if any(c not in reader.fieldnames for c in ('nome', 'fabricante', 'cidade')):
+        messages.error(request, 'CSV sem as colunas NOME OLT, FABRICANTE e CIDADE.')
+        return redirect('admin_olts')
+
+    fabricantes = {f.nome.lower(): f for f in FabricanteOLT.objects.all()}
+    novos_fabs, linhas, vistos = [], [], set()
+    for row in reader:
+        nome = (row.get('nome') or '').strip()
+        fab_nome = (row.get('fabricante') or '').strip()
+        if not nome or not fab_nome or nome.upper() in vistos:
+            continue
+        vistos.add(nome.upper())
+        fab = fabricantes.get(fab_nome.lower())
+        if not fab:
+            fab = fabricantes[fab_nome.lower()] = FabricanteOLT(nome=fab_nome, onu='?')
+            novos_fabs.append(fab)
+        campos = {k: (row.get(k) or '').strip() for k in ('modelo', 'cidade', 'sigla', 'site', 'endereco')}
+        linhas.append((nome, fab, campos))
+
+    with transaction.atomic():
+        for fab in novos_fabs:
+            fab.save()
+        OLT.objects.all().delete()
+        OLT.objects.bulk_create([OLT(nome=nome, fabricante=fab, **campos) for nome, fab, campos in linhas])
+    msg = f'{len(linhas)} OLTs importadas.'
+    if novos_fabs:
+        msg += ' Fabricantes novos (preencha a ONU): ' + ', '.join(f.nome for f in novos_fabs) + '.'
+    messages.success(request, msg)
+    return redirect('admin_olts')
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_fabricante_save(request, fabricante_id):
+    fab = get_object_or_404(FabricanteOLT, id=fabricante_id)
+    if request.method == 'POST':
+        onu = request.POST.get('onu', '').strip()
+        if onu:
+            fab.onu = onu
+            fab.aviso = request.POST.get('aviso', '').strip()
+            fab.save()
+            messages.success(request, f'Compatibilidade {fab.nome} salva.')
+    return redirect('admin_olts')
+
+
+def _olt_form(request, olt):
+    fabricantes = FabricanteOLT.objects.all()
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        cidade = request.POST.get('cidade', '').strip()
+        fab = fabricantes.filter(id=request.POST.get('fabricante')).first()
+        if nome and cidade and fab:
+            if OLT.objects.filter(nome__iexact=nome).exclude(id=olt.id if olt else None).exists():
+                messages.error(request, f'Já existe uma OLT {nome}.')
+            else:
+                olt = olt or OLT()
+                olt.nome, olt.cidade, olt.fabricante = nome, cidade, fab
+                for campo in ('modelo', 'sigla', 'site', 'endereco'):
+                    setattr(olt, campo, request.POST.get(campo, '').strip())
+                olt.save()
+                return redirect('admin_olts')
+    return render(request, 'admin/olt_form.html', {
+        'action': 'Editar' if olt else 'Criar', 'obj': olt, 'fabricantes': fabricantes,
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_olt_create(request):
+    return _olt_form(request, None)
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_olt_edit(request, olt_id):
+    return _olt_form(request, get_object_or_404(OLT, id=olt_id))
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_olt_delete(request, olt_id):
+    olt = get_object_or_404(OLT, id=olt_id)
+    if request.method == 'POST':
+        olt.delete()
+        return redirect('admin_olts')
+    return render(request, 'admin/confirm_delete.html', {'object': olt, 'type': 'OLT'})

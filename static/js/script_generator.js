@@ -20,12 +20,12 @@
   const PHONE_RE = /\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/;
 
   const $ = (id) => document.getElementById(id);
-  const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'endereco', 'responsavel', 'tel'];
+  const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'compat', 'endereco', 'responsavel', 'tel'];
   // Tratativas cujo texto colado é o e-mail da solicitação (campos "p-...") e os campos de cada uma.
   const EMAIL_MODES = {
-    plano: ['adm', 'solicitante', 'nome', 'plano_atual', 'ativo', 'plano_novo', 'tel',
+    plano: ['adm', 'solicitante', 'nome', 'plano_atual', 'ativo', 'compat', 'plano_novo', 'tel',
       'endereco', 'complemento', 'horario', 'responsavel'],
-    instalacao: ['nome', 'plano_novo', 'prospect', 'tel', 'endereco', 'complemento', 'horario', 'responsavel'],
+    instalacao: ['nome', 'plano_novo', 'prospect', 'compat', 'tel', 'endereco', 'complemento', 'horario', 'responsavel'],
   };
   const emailIds = [...new Set(Object.values(EMAIL_MODES).flat())];
   // Podem ficar vazios: têm valor padrão ou são preenchidos à mão só quando existem.
@@ -64,6 +64,93 @@
     return findAll(lines, label, nextLine)[0] || '';
   }
 
+  // "Fibra Home 750M+ c/ Servicos Digitais 2026 * Turbo-G-1G" → "Fibra Home 750M+ c/ Servicos Digitais 2026"
+  // "Fibra Business+ 600M 2024 T-F-24.600M.6000G.IP" → "Fibra Business+ 600M 2024"
+  // Corta no "*" e depois da última velocidade (600M, 1G) ou ano (2024) solto no nome.
+  function trimPlano(s) {
+    const tokens = s.split('*')[0].trim().split(/\s+/);
+    let last = -1;
+    tokens.forEach((t, i) => {
+      if (/^\d+([.,]\d+)?(M|G|MB|GB|MBPS|GBPS)\+?$/i.test(t) || /^20\d{2}$/.test(t)) last = i;
+    });
+    return (last >= 0 ? tokens.slice(0, last + 1) : tokens).join(' ');
+  }
+
+  // ── Compatibilidade OLT → ONU ───────────────────────────────────────────────
+  // OLTs cadastradas no painel (/admin-wiki/olts/), vindas da view. A OLT exata sai
+  // do Hostname do SIS; sem ele, da cidade do endereço — e cidade com OLTs de mais de
+  // um fabricante traz todos, com aviso para confirmar.
+  const OLT_DATA = JSON.parse(($('olt-data') || {}).textContent || '{}');
+  const HOSTNAME_RE = /\bLT-G\d+-([A-Z]+)\d*-SP(_NOVO)?\b/i;
+
+  // Mesma chave que city_key() na view: sem acento, apóstrofo ou pontuação.
+  function cityKey(s) {
+    return fold(s).replace(/['`´’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  // Cidade do SIS, às vezes abreviada ("Francis. Morato", "Sta Rita d Passa Quatro").
+  function matchCity(raw) {
+    const cidades = OLT_DATA.cidades || {};
+    const key = cityKey(raw);
+    if (!key) return null;
+    if (cidades[key]) return cidades[key];
+    const words = fold(raw).replace(/['`´’]/g, '').match(/[a-z0-9]+\.?/g) || [];
+    const tokens = words.map((w) => ({ t: w.replace('.', ''), abbr: w.endsWith('.') || w.length <= 2 }));
+    const hit = Object.keys(cidades).find((k) => {
+      const parts = k.split(' ');
+      return parts.length === tokens.length && parts.every((p, i) => (
+        p === tokens[i].t || (tokens[i].abbr && p.startsWith(tokens[i].t)) || (p.length <= 2 && tokens[i].t.startsWith(p))
+      ));
+    });
+    return hit ? cidades[hit] : null;
+  }
+
+  // Endereço já formatado ("Rua, 10 - Bairro - Cidade/SP - CEP"): a cidade é a parte
+  // mais perto do fim que bate com uma cidade cadastrada (rua/bairro com nome de
+  // cidade vêm antes).
+  function cityInEndereco(endereco) {
+    const parts = endereco.split(/\s[-–]\s|\/|,/).map((p) => p.trim()).filter(Boolean);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const cidade = matchCity(parts[i]);
+      if (cidade) return cidade;
+    }
+    return null;
+  }
+
+  // { compat: 'OLT ZTE - ONU ZG / ...', avisos: [...] } a partir do hostname e/ou cidade.
+  function compatibilidade(hostname, cidadeRaw, cidade) {
+    const fabricantes = OLT_DATA.fabricantes || {};
+    let fabs = [];
+    let origem = '';
+    if (hostname) {
+      const host = hostname.toUpperCase();
+      const exata = (OLT_DATA.olts || {})[host] || (OLT_DATA.olts || {})[host.replace(/_NOVO$/, '')];
+      if (exata) fabs = [exata];
+      else {
+        fabs = (OLT_DATA.siglas || {})[host.match(HOSTNAME_RE)[1]] || [];
+        origem = 'a OLT ' + host;
+      }
+    }
+    if (!fabs.length && cidade) {
+      fabs = cidade.fabs;
+      origem = cidade.nome;
+    }
+    const avisos = [];
+    if (!fabs.length) {
+      if (hostname || cidadeRaw) {
+        avisos.push('Nenhuma OLT cadastrada para ' + (hostname ? hostname.toUpperCase() : cidadeRaw)
+          + ': preencha a Compatibilidade à mão.');
+      }
+      return { compat: '', avisos };
+    }
+    if (fabs.length > 1) {
+      avisos.push(origem + ' tem OLTs ' + fabs.join(' e ') + ': confirme a OLT do cliente antes de enviar.');
+    }
+    fabs.forEach((f) => { if (fabricantes[f] && fabricantes[f].aviso) avisos.push(fabricantes[f].aviso); });
+    const compat = fabs.map((f) => 'OLT ' + f + ' - ONU ' + ((fabricantes[f] || {}).onu || '?')).join(' / ');
+    return { compat, avisos };
+  }
+
   function formatPppoe(login) {
     const at = login.indexOf('@');
     if (at !== -1 && login.slice(at + 1).toLowerCase() === SHORT_PPPOE_DOMAIN) {
@@ -90,7 +177,7 @@
     // Com vários links no mesmo ADM, "Serviços" lista todos; o serviço aberto é a
     // linha logo antes de "Adicionais do Contrato".
     const adicionaisIdx = lines.findIndex((l) => fold(l).startsWith('adicionais do contrato'));
-    out.plano = adicionaisIdx > 0 ? lines[adicionaisIdx - 1] : find(lines, 'servicos', true);
+    out.plano = trimPlano(adicionaisIdx > 0 ? lines[adicionaisIdx - 1] : find(lines, 'servicos', true));
 
     // Só aparece com o "Mostrar" dos Ativos aberto (ex.: "ZN220280 - ONT Zyxel-PMG2005").
     // Pode haver mais de um (ONU + roteador); procura só até "IP's Adicionais".
@@ -106,16 +193,30 @@
       });
     }
     out.ativo = ativos.join(' / ');
+    out.endereco = enderecoSis(lines);
+    out.tel = sisPhones(lines);
 
-    // Formato fixo: Rua, número - Bairro - Cidade/SP
+    // "Hostname  LT-G01-FAT003-SP" = a OLT do cliente (exata, mesmo em cidade com dois fabricantes).
+    const host = find(lines, 'hostname').match(HOSTNAME_RE);
+    const cidadeRaw = find(lines, 'cidade');
+    const c = compatibilidade(host ? host[0] : '', cidadeRaw, matchCity(cidadeRaw));
+    out.compat = c.compat;
+    out.avisos = c.avisos;
+    return out;
+  }
+
+  // Formato fixo (ficha e prospect do SIS): Rua, número - Bairro - Cidade/SP
+  function enderecoSis(lines) {
     const rua = find(lines, 'logradouro');
     const numero = find(lines, 'numero');
     const bairro = find(lines, 'bairro');
     const cidade = find(lines, 'cidade');
-    out.endereco = rua
+    return rua
       ? rua + (numero ? ', ' + numero : '') + (bairro ? ' - ' + bairro : '') + (cidade ? ' - ' + cidade + '/SP' : '')
       : '';
+  }
 
+  function sisPhones(lines) {
     const phones = [];
     ['celular', 'fixo', 'telefone', 'fone'].forEach((label) => {
       findAll(lines, label).forEach((value) => {
@@ -125,8 +226,32 @@
         });
       });
     });
-    out.tel = phones.join(' / ');
+    return phones.join(' / ');
+  }
 
+  // Página do Prospect no SIS (Instalação): o comercial cria o prospect antes do ADM.
+  function isProspect(text) {
+    return /c[oó]digo do contrato/i.test(text) && /\bcontratos\b/i.test(text);
+  }
+
+  function parseProspect(text) {
+    const lines = text.split(/\r?\n/).map((l) => l.normalize('NFC').trim()).filter(Boolean);
+    const out = {};
+    // O nome da empresa não tem rótulo: é a linha logo antes de "Status SPC" (ou do CNPJ/CPF).
+    const nomeIdx = ['status spc', 'cnpj', 'cpf'].map((label) => (
+      lines.findIndex((l) => labelRe(label).test(fold(l)))
+    )).find((i) => i > 0);
+    out.nome = nomeIdx ? lines[nomeIdx - 1] : '';
+    out.plano_novo = trimPlano(find(lines, 'contratos', true));
+    const codigo = find(lines, 'codigo do contrato').match(/\d+/);
+    out.prospect = codigo ? codigo[0] : '';
+    out.endereco = enderecoSis(lines);
+    out.complemento = find(lines, 'complemento');
+    out.tel = sisPhones(lines);
+    const cidadeRaw = find(lines, 'cidade');
+    const c = compatibilidade('', cidadeRaw, matchCity(cidadeRaw));
+    out.compat = c.compat;
+    out.avisos = c.avisos;
     return out;
   }
 
@@ -230,7 +355,7 @@
       .replace(/\s+/g, ' ')
       .replace(/\s+\/\s+/g, ', ')
       .replace(/[.,]?\s*\bcep\b\s*:?\s*/i, ' - ')
-      .replace(/\s*[-–]?\s*\bSP\b\.?(?=\s*[-–]|\s*$)/i, '/SP')
+      .replace(/\s*[-–\/]?\s*\bSP\b\.?(?=\s*[-–]|\s*$)/i, '/SP')
       .replace(/\s+[-–](\s+[-–])+\s+/g, ' - ')
       .replace(/^[\s\-–,]+|[\s\-–,]+$/g, '')
       .trim();
@@ -295,8 +420,12 @@
 
     out.solicitante = findSolicitante(text, lines);
     out.nome = emailField(lines, 'nome');
-    out.plano_novo = emailField(lines, 'plano_novo');
+    out.plano_novo = trimPlano(emailField(lines, 'plano_novo'));
     out.endereco = formatEndereco(emailField(lines, 'endereco', 'endereco'));
+    // Sem hostname no e-mail: a OLT sai da cidade do endereço.
+    const c = compatibilidade('', '', cityInEndereco(out.endereco));
+    out.compat = c.compat;
+    out.avisos = out.endereco && !c.compat ? ['Cidade sem OLT cadastrada: preencha a Compatibilidade à mão.'] : c.avisos;
     const prospect = emailField(lines, 'prospect').match(/\d+/);
     out.prospect = prospect ? prospect[0] : '';
 
@@ -312,7 +441,7 @@
     // Normalmente preenchidos à mão: só sobrescreve se o e-mail trouxer.
     ['plano_atual', 'complemento', 'horario'].forEach((key) => {
       const value = emailField(lines, key);
-      if (value) out[key] = value;
+      if (value) out[key] = key === 'plano_atual' ? trimPlano(value) : value;
     });
     return out;
   }
@@ -362,10 +491,12 @@
     $('gpon-row').classList.toggle('hidden', email);
     $('equip-row').classList.toggle('hidden', !email);
     $('intro-sis').classList.toggle('hidden', email);
-    $('intro-email').classList.toggle('hidden', !email);
-    $('intro-email-tipo').textContent = mode === 'instalacao' ? 'instalação' : 'mudança de plano';
-    $('sis-label').textContent = email ? 'Texto do e-mail' : 'Texto da página do SIS';
-    $('f-sis').placeholder = email ? 'Cole aqui o conteúdo do e-mail da solicitação...' : 'Cole aqui o conteúdo da ficha do cliente...';
+    $('intro-email').classList.toggle('hidden', mode !== 'plano');
+    $('intro-prospect').classList.toggle('hidden', mode !== 'instalacao');
+    $('sis-label').textContent = mode === 'instalacao' ? 'Texto do Prospect (ou e-mail)'
+      : email ? 'Texto do e-mail' : 'Texto da página do SIS';
+    $('f-sis').placeholder = mode === 'instalacao' ? 'Cole aqui a página do Prospect...'
+      : email ? 'Cole aqui o conteúdo do e-mail da solicitação...' : 'Cole aqui o conteúdo da ficha do cliente...';
     if (!email) return;
     document.querySelectorAll('#fields-plano [data-field]').forEach((el) => {
       el.classList.toggle('hidden', !EMAIL_MODES[mode].includes(el.dataset.field));
@@ -401,6 +532,7 @@
         'Nome da Empresa: ' + v.nome,
         'Plano: ' + v.plano_novo,
         'Prospect: ' + v.prospect,
+        'Compatibilidade: ' + v.compat,
         '',
         'Endereço: ' + v.endereco,
         'Complemento: ' + v.complemento,
@@ -427,6 +559,7 @@
         'Nome da Empresa: ' + v.nome,
         'ADM: ' + v.adm,
         'Ativo do equipamento: ' + v.ativo,
+        'Compatibilidade: ' + v.compat,
         'Plano atual: ' + v.plano_atual,
         'Plano novo: ' + v.plano_novo,
         '',
@@ -443,10 +576,26 @@
       if (!v.plano_atual) pending.push('plano atual');
       if (!v.ativo) pending.push('ativo');
     }
+    if (!v.compat) pending.push('compatibilidade');
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 
+  // Avisos da Compatibilidade (cidade com dois fabricantes, OLT legado, cidade sem OLT),
+  // fora do script: o técnico não vê, mas o analista confere antes de enviar.
+  let oltAvisos = [];
+
+  function renderAvisos() {
+    const box = $('olt-aviso');
+    box.replaceChildren(...oltAvisos.map((msg) => {
+      const p = document.createElement('p');
+      p.textContent = '⚠️ ' + msg;
+      return p;
+    }));
+    box.classList.toggle('hidden', !oltAvisos.length);
+  }
+
   function render() {
+    renderAvisos();
     const mode = emailMode();
     if (mode) {
       renderEmail(mode);
@@ -486,6 +635,7 @@
       'ADM: ' + $('f-adm').value.trim(),
       'Plano: ' + v.plano,
       'Ativo do equipamento: ' + v.ativo,
+      'Compatibilidade: ' + v.compat,
       '',
       'Endereço: ' + v.endereco,
       'Horário de atendimento: ' + ($('f-horario').value.trim() || 'Administrativo'),
@@ -500,6 +650,7 @@
     if (!tratativa) pending.push('tratativa');
     if (needsGpon && tratativa && !gpon) pending.push('GPON UP/DOWN');
     if (!dedicado && !v.ativo) pending.push('ativo (abra o "Mostrar" no SIS)');
+    if (!v.compat) pending.push('compatibilidade');
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 
@@ -508,8 +659,11 @@
   let sisEndereco = '';
 
   function reparse() {
+    const text = $('f-sis').value;
     if (emailMode()) {
-      const parsed = parseEmail($('f-sis').value);
+      // Na Instalação o texto pode ser a página do Prospect ou o e-mail.
+      const parsed = emailMode() === 'instalacao' && isProspect(text) ? parseProspect(text) : parseEmail(text);
+      oltAvisos = text.trim() ? parsed.avisos : [];
       emailIds.forEach((id) => {
         // Plano atual, ativo, complemento e horário só vêm se o e-mail trouxer: não apaga o que foi digitado.
         if (id in parsed) $('p-' + id).value = parsed[id];
@@ -517,7 +671,8 @@
       render();
       return;
     }
-    const parsed = parse($('f-sis').value);
+    const parsed = parse(text);
+    oltAvisos = text.trim() ? parsed.avisos : [];
     sisEndereco = parsed.endereco;
     if (!$('keep-endereco').checked) parsed.endereco = '';
     fieldIds.forEach((id) => { $('f-' + id).value = parsed[id] || ''; });

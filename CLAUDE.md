@@ -36,6 +36,7 @@ Admin user is created directly in the database. Password is managed via Django A
 | `/chat/` | Chatbot JSON API (RAG over wiki content) |
 | `/ferramentas/gerador-sa/` | Gerador de Script de SA (client-side only) |
 | `/admin-wiki/dashboard/` | Admin panel (admin only) |
+| `/admin-wiki/olts/` | OLTs + compatibilidade OLT→ONU do Gerador SA (import CSV) |
 | `/django-admin/` | Django built-in admin |
 
 ## Models (`core/models.py`)
@@ -44,6 +45,7 @@ Admin user is created directly in the database. Password is managed via Django A
 - `ContentBlock` — content inside a minor topic; types: `text`, `image`, `video`, `checklist`, `link`. Also stores `embedding` and `image_description`, used only by the chatbot.
 - `GlossaryTerm` — global glossary; any matching word in rendered text/checklists gets an auto tooltip.
 - `Regiao` → `Territorio` → `Cidade` — geographic hierarchy for the regionais page, separate from the topic tree.
+- `FabricanteOLT` (nome, ONU compatível, aviso) and `OLT` (hostname, fabricante, cidade, sigla...) — used only by the Gerador SA "Compatibilidade" line; separate from `Cidade`.
 
 ## Content blocks
 Admins add blocks via `/admin-wiki/topico/<major>/<minor>/conteudo/`. Block types:
@@ -71,7 +73,11 @@ Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mai
 
 **Mudança de plano** (último botão da Tratativa): troca o modelo do script e os campos editáveis (`p-*`); o texto colado passa a ser o e-mail da solicitação (Ctrl+A, Ctrl+C), lido por `parseEmail`. Sem GPON e sem "Cliente dedicado". O e-mail **não é padronizado** (pessoas diferentes, encaminhados, rótulos variados), então o parser é tolerante: cada campo tem vários rótulos em `EMAIL_FIELDS` (regex sobre a linha sem acento, no começo da linha, separador opcional `:`/`?`/`=`/`>>>`/`-` ou nenhum, valor na mesma linha ou na de baixo); linhas longas quebradas pelo e-mail, endereço continuado por linha com CEP/cidade e contato continuado por linha com telefone são juntados. Para calibrar com um e-mail novo, acrescentar rótulos em `EMAIL_FIELDS` sem remover os existentes. Regras: ADM = primeiro `ADM:`/`ADM <n>`/`ADM Nº <n>` sem zeros à esquerda; quem solicitou = e-mail pessoal da Desktop (`nome.sobrenome` ou `nome.<inicial>sobrenome`) no primeiro `From:`/`De:` que tiver um (senão o primeiro fora de To/CC), casado com um nome do texto (assinatura, cabeçalho, "… adicionou uma nota" — que pode ser "Externo User") para virar "Nome Sobrenome" + ` - B2B Desktop`; Responsável e Contato = quem recebe o técnico ("Contato para Agendar instalação", "contato no local", "Contato técnico", ou "Nome/Telefone Contato Técnico"), diferente de quem enviou; Roteador desbloqueado, Necessidade de RB e Necessidade de ATA vêm dos botões Roteador?/RB?/ATA? (Sim/Não, padrão Não — no lugar de GPON/dedicado; não se tenta adivinhar pelo e-mail); endereço vira `… - Bairro - Cidade/SP - CEP`. Plano atual, Complemento e Horário só vêm se o e-mail trouxer; Ativo sempre à mão (Ativo e Plano atual ficam amarelos até preencher); SOLICITAÇÃO: `Mudança de plano`.
 
-**Instalação** (botão à direita de Mudança de plano): também lê o e-mail (mesmo `parseEmail`, modos em `EMAIL_MODES`), com os botões Roteador?/RB?/ATA?. Campos: Empresa, Plano, Prospect (número após "Prospect"), Endereço, Complemento, Horário, Responsável, Contato. "Tipo de instalação" fica vazio. Ainda sem e-mail real de instalação para calibrar.
+**Instalação** (botão à direita de Mudança de plano): lê a **página do Prospect** do SIS (`parseProspect`, detectada por `isProspect`: "Código do Contrato" + "Contratos") ou, se não for prospect, o e-mail (`parseEmail`); modos em `EMAIL_MODES`, botões Roteador?/RB?/ATA?. Do prospect: Empresa = linha antes de "Status SPC" (ou CNPJ/CPF), Plano = linha depois de "Contratos", Prospect = "Código do Contrato", Endereço `Rua, número - Bairro - Cidade/SP` (sem CEP), Complemento. "Tipo de instalação" e Contato ficam vazios.
+
+**Nome do plano** (todos os modos, `trimPlano`): corta no `*` e depois da última velocidade (`600M`, `1G`, `750M+`) ou ano (`2024`) solto — `Fibra Business+ 600M 2024 T-F-24.600M.6000G.IP` → `Fibra Business+ 600M 2024`.
+
+**Compatibilidade** (linha nova em todos os scripts: abaixo de Ativo nos modos do SIS e na Mudança de plano, abaixo de Prospect na Instalação): `OLT <fabricante> - ONU <onu>`, várias separadas por ` / `. Dados no banco, editáveis em `/admin-wiki/olts/` (models `FabricanteOLT` — nome, ONU, aviso — e `OLT`, importadas de um CSV com NOME OLT/FABRICANTE/CIDADE que substitui todas; o CSV real **nunca** vai para o repo, `olts*.csv` está no `.gitignore`). A view passa `olt_data` (`json_script`) com OLTs por hostname, por sigla e por cidade (`city_key`, igual a `cityKey` no JS: sem acento/apóstrofo). Busca: ficha do SIS → `Hostname LT-GOX-SIGLA00Y-SP` exato (resolve mesmo nas cidades com dois fabricantes), senão sigla, senão Cidade (aceita abreviação, ex. "Francis. Morato"); prospect → Cidade; e-mail → parte do endereço mais perto do fim que for uma cidade cadastrada. Cidade com mais de um fabricante traz todos (do que tem mais OLTs ao que tem menos) + aviso amarelo fora do script (`#olt-aviso`) para confirmar; o aviso do fabricante também aparece (Huawei = legado, validar); cidade sem OLT → campo amarelo + aviso. Compatibilidade padrão (migration `0008`): ZTE→ZG, Nokia→ZN, Zhone→ZN 110B, Fiberhome→FH, Huawei→HW.
 
 Obs "LIGAR ANTES DE IR AO LOCAL" (todos os modos): com um único telefone, acrescenta ` - <telefone>`.
 

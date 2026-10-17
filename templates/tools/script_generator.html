@@ -16,7 +16,10 @@
       No SIS, abra a ficha do cliente, clique em <strong>Mostrar</strong> nos Ativos, dê Ctrl+A, Ctrl+C e cole abaixo.
     </p>
     <p id="intro-email" class="hidden text-sm text-body/80 mt-1">
-      Abra o e-mail da solicitação de <span id="intro-email-tipo">mudança de plano</span>, dê Ctrl+A, Ctrl+C e cole abaixo.
+      Abra o e-mail da solicitação de mudança de plano, dê Ctrl+A, Ctrl+C e cole abaixo.
+    </p>
+    <p id="intro-prospect" class="hidden text-sm text-body/80 mt-1">
+      No SIS, abra o <strong>Prospect</strong> (ou o e-mail da solicitação), dê Ctrl+A, Ctrl+C e cole abaixo.
     </p>
   </div>
 
@@ -102,7 +105,7 @@
         <h2 class="text-sm font-bold text-ink mb-2">Dados extraídos <span class="font-normal text-mute">(confira e edite se precisar — amarelo = não encontrado)</span></h2>
         <div id="fields-sis" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {% for id, label in fields %}
-          <div class="{% if id == 'nome' or id == 'plano' or id == 'endereco' %}sm:col-span-2{% endif %}">
+          <div class="{% if id == 'nome' or id == 'plano' or id == 'endereco' or id == 'compat' %}sm:col-span-2{% endif %}">
             <div class="flex items-center justify-between mb-1">
               <label for="f-{{ id }}" class="text-xs font-semibold text-mute">{{ label }}</label>
               {% if id == 'endereco' %}
@@ -116,18 +119,20 @@
                    {% if id == 'horario' %}placeholder="Administrativo"{% endif %}
                    {% if id == 'responsavel' %}placeholder="Quem estiver no local"{% endif %}
                    {% if id == 'adm' %}inputmode="numeric" data-auto="1"{% endif %}
+                   {% if id == 'compat' %}placeholder="OLT ... - ONU ..."{% endif %}
                    class="sg-input h-10 w-full px-4 rounded-2xl border-2 border-hairline bg-white text-sm text-ink placeholder-ash focus:outline-none focus:border-brand-yellow transition disabled:bg-card disabled:text-ash" />
           </div>
           {% endfor %}
         </div>
         <div id="fields-plano" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
           {% for id, label in plano_fields %}
-          <div data-field="{{ id }}" class="{% if id == 'nome' or id == 'plano_novo' or id == 'endereco' or id == 'complemento' %}sm:col-span-2{% endif %}">
+          <div data-field="{{ id }}" class="{% if id == 'nome' or id == 'plano_novo' or id == 'endereco' or id == 'complemento' or id == 'compat' %}sm:col-span-2{% endif %}">
             <label for="p-{{ id }}" class="block text-xs font-semibold text-mute mb-1">{{ label }}</label>
             <input id="p-{{ id }}" type="text" autocomplete="off"
                    {% if id == 'horario' %}placeholder="Administrativo"{% endif %}
                    {% if id == 'responsavel' %}placeholder="Quem estiver no local"{% endif %}
                    {% if id == 'solicitante' %}placeholder="Nome Sobrenome"{% endif %}
+                   {% if id == 'compat' %}placeholder="OLT ... - ONU ..."{% endif %}
                    {% if id == 'adm' or id == 'prospect' %}inputmode="numeric"{% endif %}
                    class="sg-input h-10 w-full px-4 rounded-2xl border-2 border-hairline bg-white text-sm text-ink placeholder-ash focus:outline-none focus:border-brand-yellow transition" />
           </div>
@@ -144,6 +149,7 @@
       </div>
       <textarea id="preview" rows="22" readonly
                 class="w-full px-4 py-3 rounded-2xl border-2 border-hairline bg-card text-sm font-mono text-ink resize-none focus:outline-none"></textarea>
+      <div id="olt-aviso" class="hidden mt-3 px-4 py-3 rounded-2xl border-2 border-brand-yellow bg-brand-yellow/20 text-ink text-sm font-semibold space-y-1"></div>
       <div class="flex gap-2 mt-3">
         <button id="copy-btn" type="button"
                 class="flex-1 h-11 rounded-2xl bg-brand-red text-white font-bold text-sm hover:bg-brand-redhov transition">
@@ -164,5 +170,6 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ olt_data|json_script:"olt-data" }}
 <script src="{% static 'js/script_generator.js' %}?v={{ js_version }}"></script>
 {% endblock %}
