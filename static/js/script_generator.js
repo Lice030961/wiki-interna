@@ -117,8 +117,14 @@
     return null;
   }
 
+  // Planos Home e Business Combo ("Bus. Combo"): DS (ONU da Desktop), ONU integrada ou kit.
+  function isCombo(plano) {
+    return /\bhome\b|\bbus(iness|\.)?\s*combo\b/.test(fold(plano || ''));
+  }
+
   // { compat: 'OLT ZTE - ONU ZG / ...', avisos: [...] } a partir do hostname e/ou cidade.
-  function compatibilidade(hostname, cidadeRaw, cidade) {
+  // Plano combo: 'DS / ONU Integrada / Kit (ZG)'.
+  function compatibilidade(hostname, cidadeRaw, cidade, plano) {
     const fabricantes = OLT_DATA.fabricantes || {};
     let fabs = [];
     let origem = '';
@@ -147,7 +153,10 @@
       avisos.push(origem + ' tem OLTs ' + fabs.join(' e ') + ': confirme a OLT do cliente antes de enviar.');
     }
     fabs.forEach((f) => { if (fabricantes[f] && fabricantes[f].aviso) avisos.push(fabricantes[f].aviso); });
-    const compat = fabs.map((f) => 'OLT ' + f + ' - ONU ' + ((fabricantes[f] || {}).onu || '?')).join(' / ');
+    const onu = (f) => (fabricantes[f] || {}).onu || '?';
+    const compat = isCombo(plano)
+      ? 'DS / ONU Integrada / Kit (' + fabs.map(onu).join(' ou ') + ')'
+      : fabs.map((f) => 'OLT ' + f + ' - ONU ' + onu(f)).join(' / ');
     return { compat, avisos };
   }
 
@@ -198,8 +207,10 @@
 
     // "Hostname  LT-G01-FAT003-SP" = a OLT do cliente (exata, mesmo em cidade com dois fabricantes).
     const host = find(lines, 'hostname').match(HOSTNAME_RE);
+    // Sem Ativo e sem Hostname = cliente dedicado, que não tem OLT: não busca pela cidade.
     const cidadeRaw = find(lines, 'cidade');
-    const c = compatibilidade(host ? host[0] : '', cidadeRaw, matchCity(cidadeRaw));
+    const c = !ativos.length && !host ? { compat: '', avisos: [] }
+      : compatibilidade(host ? host[0] : '', cidadeRaw, matchCity(cidadeRaw), out.plano);
     out.compat = c.compat;
     out.avisos = c.avisos;
     return out;
@@ -249,7 +260,7 @@
     out.complemento = find(lines, 'complemento');
     out.tel = sisPhones(lines);
     const cidadeRaw = find(lines, 'cidade');
-    const c = compatibilidade('', cidadeRaw, matchCity(cidadeRaw));
+    const c = compatibilidade('', cidadeRaw, matchCity(cidadeRaw), out.plano_novo);
     out.compat = c.compat;
     out.avisos = c.avisos;
     return out;
@@ -423,7 +434,7 @@
     out.plano_novo = trimPlano(emailField(lines, 'plano_novo'));
     out.endereco = formatEndereco(emailField(lines, 'endereco', 'endereco'));
     // Sem hostname no e-mail: a OLT sai da cidade do endereço.
-    const c = compatibilidade('', '', cityInEndereco(out.endereco));
+    const c = compatibilidade('', '', cityInEndereco(out.endereco), out.plano_novo);
     out.compat = c.compat;
     out.avisos = out.endereco && !c.compat ? ['Cidade sem OLT cadastrada: preencha a Compatibilidade à mão.'] : c.avisos;
     const prospect = emailField(lines, 'prospect').match(/\d+/);
@@ -610,13 +621,18 @@
 
     $('gpon-group').classList.toggle('hidden', !needsGpon || gponFixo);
     $('f-ativo').disabled = dedicado;
+    $('f-compat').disabled = dedicado;
     // As Obs padrão (IGREJA, LOS VERMELHA...) não se aplicam a dedicado: só texto livre.
     $('obs-presets').classList.toggle('hidden', dedicado);
     if (dedicado) document.querySelectorAll('input[name="obs"]').forEach((el) => { el.checked = false; });
 
     const v = {};
     fieldIds.forEach((id) => { v[id] = $('f-' + id).value.trim(); });
-    if (dedicado) v.ativo = '-';
+    // Dedicado não tem ONU nem OLT.
+    if (dedicado) {
+      v.ativo = '-';
+      v.compat = '-';
+    }
     if (!v.responsavel) v.responsavel = DEFAULT_RESPONSAVEL;
 
     ['adm'].concat(fieldIds).forEach((id) => {
@@ -650,7 +666,7 @@
     if (!tratativa) pending.push('tratativa');
     if (needsGpon && tratativa && !gpon) pending.push('GPON UP/DOWN');
     if (!dedicado && !v.ativo) pending.push('ativo (abra o "Mostrar" no SIS)');
-    if (!v.compat) pending.push('compatibilidade');
+    if (!dedicado && !v.compat) pending.push('compatibilidade');
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 
