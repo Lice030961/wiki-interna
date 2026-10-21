@@ -59,4 +59,8 @@ urlpatterns = [
     path('admin-wiki/olts/<int:olt_id>/editar/', views.admin_olt_edit, name='admin_olt_edit'),
     path('admin-wiki/olts/<int:olt_id>/excluir/', views.admin_olt_delete, name='admin_olt_delete'),
     path('admin-wiki/olts/fabricante/<int:fabricante_id>/salvar/', views.admin_fabricante_save, name='admin_fabricante_save'),
+    path('admin-wiki/olts/projetos/importar/', views.admin_projeto_import, name='admin_projeto_import'),
+    path('admin-wiki/olts/projetos/criar/', views.admin_projeto_save, name='admin_projeto_create'),
+    path('admin-wiki/olts/projetos/<int:projeto_id>/salvar/', views.admin_projeto_save, name='admin_projeto_save'),
+    path('admin-wiki/olts/projetos/<int:projeto_id>/excluir/', views.admin_projeto_delete, name='admin_projeto_delete'),
 ]

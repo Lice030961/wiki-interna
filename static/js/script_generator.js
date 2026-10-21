@@ -20,7 +20,7 @@
   const PHONE_RE = /\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/;
 
   const $ = (id) => document.getElementById(id);
-  const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'compat', 'endereco', 'responsavel', 'tel'];
+  const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'compat', 'cto', 'endereco', 'responsavel', 'tel'];
   // Tratativas cujo texto colado é o e-mail da solicitação (campos "p-...") e os campos de cada uma.
   const EMAIL_MODES = {
     plano: ['adm', 'solicitante', 'nome', 'plano_atual', 'ativo', 'compat', 'plano_novo', 'tel',
@@ -115,6 +115,38 @@
       if (cidade) return cidade;
     }
     return null;
+  }
+
+  // ── CTO ─────────────────────────────────────────────────────────────────────
+  // Projeto GPON do SIS → sigla da CTO, cadastrada no painel (/admin-wiki/olts/).
+  // Mesma chave que projeto_key() na view: sem acento e sem o "GPON" do começo.
+  function projetoKey(s) {
+    return cityKey(s).replace(/^gpon /, '');
+  }
+
+  // O SIS põe vários rótulos na mesma linha ("Caixa  1945  Num  8"): valor da
+  // célula logo depois da que é exatamente o rótulo.
+  function cellAfter(lines, label) {
+    for (const line of lines) {
+      const cells = line.split(/\t|\s{2,}/).map((c) => c.trim());
+      const i = cells.findIndex((c) => fold(c).replace(/:$/, '') === label);
+      if (i !== -1 && cells[i + 1]) return cells[i + 1];
+    }
+    return '';
+  }
+
+  // "Projeto GPON Bauru Area E LPNET" + "Caixa 1945" + "Num 8" →
+  // "GPON Bauru Area E LPNET / BRE-1945 Porta 8". Sem sigla cadastrada fica "?" (amarelo).
+  function cto(lines) {
+    const projeto = cellAfter(lines, 'projeto');
+    const caixa = cellAfter(lines, 'caixa');
+    const porta = cellAfter(lines, 'num');
+    if (!projeto || !caixa) return { cto: '', avisos: [] };
+    const sigla = (OLT_DATA.projetos || {})[projetoKey(projeto)];
+    return {
+      cto: projeto + ' / ' + (sigla || '?') + '-' + caixa + (porta ? ' Porta ' + porta : ''),
+      avisos: sigla ? [] : ['Projeto "' + projeto + '" sem sigla cadastrada: complete a CTO à mão (ou cadastre no painel).'],
+    };
   }
 
   // Planos Home e Business Combo ("Bus. Combo"): DS (ONU da Desktop), ONU integrada ou kit.
@@ -212,7 +244,9 @@
     const c = !ativos.length && !host ? { compat: '', avisos: [] }
       : compatibilidade(host ? host[0] : '', cidadeRaw, matchCity(cidadeRaw), out.plano);
     out.compat = c.compat;
-    out.avisos = c.avisos;
+    const t = cto(lines);
+    out.cto = t.cto;
+    out.avisos = c.avisos.concat(t.avisos);
     return out;
   }
 
@@ -622,22 +656,25 @@
     $('gpon-group').classList.toggle('hidden', !needsGpon || gponFixo);
     $('f-ativo').disabled = dedicado;
     $('f-compat').disabled = dedicado;
+    $('f-cto').disabled = dedicado;
     // As Obs padrão (IGREJA, LOS VERMELHA...) não se aplicam a dedicado: só texto livre.
     $('obs-presets').classList.toggle('hidden', dedicado);
     if (dedicado) document.querySelectorAll('input[name="obs"]').forEach((el) => { el.checked = false; });
 
     const v = {};
     fieldIds.forEach((id) => { v[id] = $('f-' + id).value.trim(); });
-    // Dedicado não tem ONU nem OLT.
+    // Dedicado não tem ONU, OLT nem CTO.
     if (dedicado) {
       v.ativo = '-';
       v.compat = '-';
+      v.cto = '-';
     }
     if (!v.responsavel) v.responsavel = DEFAULT_RESPONSAVEL;
 
     ['adm'].concat(fieldIds).forEach((id) => {
       const el = $('f-' + id);
-      markMissing(el, !el.disabled && !el.value.trim() && id !== 'responsavel');
+      // CTO com "?" = projeto sem sigla cadastrada.
+      markMissing(el, !el.disabled && id !== 'responsavel' && (!el.value.trim() || (id === 'cto' && el.value.includes('?'))));
     });
 
     const obs = buildObs(v.tel);
@@ -652,6 +689,7 @@
       'Plano: ' + v.plano,
       'Ativo do equipamento: ' + v.ativo,
       'Compatibilidade: ' + v.compat,
+      'CTO: ' + v.cto,
       '',
       'Endereço: ' + v.endereco,
       'Horário de atendimento: ' + ($('f-horario').value.trim() || 'Administrativo'),
@@ -667,6 +705,7 @@
     if (needsGpon && tratativa && !gpon) pending.push('GPON UP/DOWN');
     if (!dedicado && !v.ativo) pending.push('ativo (abra o "Mostrar" no SIS)');
     if (!dedicado && !v.compat) pending.push('compatibilidade');
+    if (!dedicado && (!v.cto || v.cto.includes('?'))) pending.push('CTO');
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 

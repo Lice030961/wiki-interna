@@ -159,3 +159,18 @@ class OLT(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class ProjetoGPON(models.Model):
+    """Projeto GPON do SIS e a sigla da CTO (ex.: "GPON Bauru Area E LPNET" → BRE).
+    O Gerador de Script SA monta "CTO: <projeto> / <sigla>-<caixa> Porta <num>"."""
+    nome = models.CharField('Projeto', max_length=150, unique=True)
+    sigla = models.CharField(max_length=20)
+
+    class Meta:
+        ordering = ['nome']
+        verbose_name = 'projeto GPON'
+        verbose_name_plural = 'projetos GPON'
+
+    def __str__(self):
+        return self.nome

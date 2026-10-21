@@ -6,6 +6,7 @@ import json
 import unicodedata
 from collections import Counter, defaultdict
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.staticfiles import finders
@@ -17,7 +18,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.db.models import Q
 
-from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade, FabricanteOLT, OLT
+from .models import MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao, Territorio, Cidade, FabricanteOLT, OLT, ProjetoGPON
 from . import chatbot
 from .tools import search_tools
 
@@ -150,6 +151,7 @@ def script_generator(request):
             ('plano', 'Plano'),
             ('ativo', 'Ativo do equipamento'),
             ('compat', 'Compatibilidade'),
+            ('cto', 'CTO'),
             ('tel', 'Tel'),
             ('endereco', 'Endereço'),
             ('horario', 'Horário de atendimento'),
@@ -205,7 +207,14 @@ def olt_data():
         'olts': by_host,
         'cidades': {key: {'nome': city_names[key], 'fabs': order(c)} for key, c in by_city.items()},
         'siglas': {sigla: order(c) for sigla, c in by_sigla.items()},
+        # Projeto GPON do SIS → sigla da CTO (mesma chave que projetoKey() no JS).
+        'projetos': {projeto_key(p.nome): p.sigla for p in ProjetoGPON.objects.all()},
     }
+
+
+def projeto_key(name):
+    """ "GPON Bauru Area E LPNET" e "Bauru Área E - LPNET" viram a mesma chave."""
+    return re.sub(r'^gpon ', '', city_key(name))
 
 
 def batimento(request):
@@ -775,6 +784,7 @@ def admin_olts(request):
         cidades.append({'nome': cidade, 'olts': lista, 'fabricantes': fabs.most_common()})
     return render(request, 'admin/olts.html', {
         'fabricantes': FabricanteOLT.objects.all(),
+        'projetos': ProjetoGPON.objects.all(),
         'cidades': cidades,
         'total': len(olts),
         'mistas': sum(1 for c in cidades if len(c['fabricantes']) > 1),
@@ -839,6 +849,90 @@ def admin_fabricante_save(request, fabricante_id):
             fab.save()
             messages.success(request, f'Compatibilidade {fab.nome} salva.')
     return redirect('admin_olts')
+
+
+# ── Admin: Projetos GPON (linha CTO do Gerador de Script SA) ──────────────────
+
+SIGLA_RE = re.compile(r'^[A-Z0-9]{2,8}$', re.I)
+
+
+def _split_projeto(line):
+    """ "GPON Bauru Area E LPNET;BRE" (ou TAB, " - ", "=", ",", "|", espaços) → (projeto, sigla).
+    A sigla é a ponta da linha que parece sigla: fim ou, invertido, começo."""
+    for sep in ('\t', ';', '|', '=', ' - ', ',', '  '):
+        if sep in line:
+            parts = [p.strip() for p in line.split(sep) if p.strip()]
+            break
+    else:
+        # Só espaço simples: a sigla tem que estar em maiúsculas no fim ("... LPNET BRE").
+        parts = line.rsplit(' ', 1)
+        if len(parts) < 2 or not parts[1].isupper():
+            return None
+    if len(parts) < 2:
+        return None
+    if SIGLA_RE.match(parts[-1]):
+        return ' - '.join(parts[:-1]), parts[-1].upper()
+    if SIGLA_RE.match(parts[0]):
+        return ' - '.join(parts[1:]), parts[0].upper()
+    return None
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_projeto_import(request):
+    """Substitui todos os projetos pelos do arquivo: uma linha por projeto, com a sigla."""
+    if request.method != 'POST' or not request.FILES.get('arquivo'):
+        return redirect('admin_olts')
+    raw = request.FILES['arquivo'].read()
+    try:
+        text = raw.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        text = raw.decode('latin-1')
+    projetos, ignoradas = {}, []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        par = _split_projeto(line)
+        # Cabeçalho ("PROJETO;SIGLA") não entra.
+        if not par or not par[0] or _csv_header(par[0]) in ('PROJETO', 'NOME', 'GPON'):
+            ignoradas.append(line)
+            continue
+        projetos.setdefault(projeto_key(par[0]), par)
+    with transaction.atomic():
+        ProjetoGPON.objects.all().delete()
+        ProjetoGPON.objects.bulk_create([ProjetoGPON(nome=n, sigla=s) for n, s in projetos.values()])
+    msg = f'{len(projetos)} projetos GPON importados.'
+    if ignoradas:
+        msg += f' {len(ignoradas)} linha(s) sem sigla ignorada(s): ' + ' | '.join(ignoradas[:5])
+    messages.success(request, msg)
+    return redirect('admin_olts')
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_projeto_save(request, projeto_id=None):
+    projeto = get_object_or_404(ProjetoGPON, id=projeto_id) if projeto_id else ProjetoGPON()
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        sigla = request.POST.get('sigla', '').strip().upper()
+        if not nome or not sigla:
+            messages.error(request, 'Preencha o projeto e a sigla.')
+        elif ProjetoGPON.objects.filter(nome__iexact=nome).exclude(id=projeto.id).exists():
+            messages.error(request, f'Já existe o projeto {nome}.')
+        else:
+            projeto.nome, projeto.sigla = nome, sigla
+            projeto.save()
+            messages.success(request, f'Projeto {nome} salvo.')
+    return redirect(reverse('admin_olts') + '#projetos')
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_projeto_delete(request, projeto_id):
+    if request.method == 'POST':
+        get_object_or_404(ProjetoGPON, id=projeto_id).delete()
+    return redirect(reverse('admin_olts') + '#projetos')
 
 
 def _olt_form(request, olt):

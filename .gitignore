@@ -32,3 +32,7 @@ Thumbs.db
 
 # Dados reais da rede (importados pelo painel, nunca no repo)
 olts*.csv
+
+# Lista de CTOs/GPON (dados reais, nunca no repo)
+GPON*.txt
+GPO*.txt

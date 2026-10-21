@@ -43,6 +43,58 @@
     </div>
   </section>
 
+  <!-- Projetos GPON → sigla da CTO -->
+  <section id="projetos" class="bg-white border-2 border-brand-red rounded-2xl p-5 sm:p-6 mb-6">
+    <h2 class="text-sm font-bold text-ink mb-1">Projetos GPON (CTO)</h2>
+    <p class="text-xs text-mute mb-3">Uma linha por projeto com a sigla (ex.: <span class="font-mono">GPON Bauru Area E LPNET;BRE</span>). Importar substitui todos.</p>
+    <form method="post" action="{% url 'admin_projeto_import' %}" enctype="multipart/form-data"
+          class="flex flex-wrap items-center gap-3 mb-4"
+          onsubmit="return {{ projetos|length }} === 0 || confirm('Substituir os {{ projetos|length }} projetos cadastrados pelos do arquivo?')">
+      {% csrf_token %}
+      <input type="file" name="arquivo" accept=".txt,.csv,text/plain,text/csv" required
+             class="flex-1 min-w-0 text-sm text-body file:mr-3 file:h-9 file:px-4 file:rounded-2xl file:border-0 file:bg-brand-yellow file:text-ink file:font-semibold file:cursor-pointer" />
+      <button type="submit"
+              class="h-9 px-5 bg-brand-red text-white font-bold text-sm rounded-2xl hover:bg-brand-redhov transition">
+        Importar
+      </button>
+    </form>
+    <details {% if not projetos %}open{% endif %}>
+      <summary class="text-sm font-semibold text-body cursor-pointer select-none mb-2">{{ projetos|length }} projetos cadastrados</summary>
+      <div class="space-y-2">
+        {% for p in projetos %}
+        <div class="flex items-center gap-2">
+          <form method="post" action="{% url 'admin_projeto_save' p.id %}" class="flex flex-1 min-w-0 items-center gap-2">
+            {% csrf_token %}
+            <input type="text" name="nome" value="{{ p.nome }}" required maxlength="150"
+                   class="flex-1 min-w-0 h-9 border border-hairline rounded-2xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+            <input type="text" name="sigla" value="{{ p.sigla }}" required maxlength="20"
+                   class="w-20 h-9 border border-hairline rounded-2xl px-3 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+            <button type="submit"
+                    class="h-9 px-4 border border-hairline text-body text-xs font-semibold rounded-2xl hover:bg-secondary transition">
+              Salvar
+            </button>
+          </form>
+          <form method="post" action="{% url 'admin_projeto_delete' p.id %}" onsubmit="return confirm('Excluir {{ p.nome|escapejs }}?')">
+            {% csrf_token %}
+            <button type="submit" class="text-mute hover:text-red-500 transition" title="Excluir">✕</button>
+          </form>
+        </div>
+        {% endfor %}
+        <form method="post" action="{% url 'admin_projeto_create' %}" class="flex items-center gap-2 pt-2 pr-6">
+          {% csrf_token %}
+          <input type="text" name="nome" required maxlength="150" placeholder="Novo projeto (ex.: GPON Bauru Area E LPNET)"
+                 class="flex-1 min-w-0 h-9 border border-hairline rounded-2xl px-3 text-sm placeholder-ash focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+          <input type="text" name="sigla" required maxlength="20" placeholder="Sigla"
+                 class="w-20 h-9 border border-hairline rounded-2xl px-3 text-sm font-mono uppercase placeholder-ash focus:outline-none focus:ring-2 focus:ring-brand-yellow" />
+          <button type="submit"
+                  class="h-9 px-4 bg-brand-red text-white text-xs font-bold rounded-2xl hover:bg-brand-redhov transition">
+            Adicionar
+          </button>
+        </form>
+      </div>
+    </details>
+  </section>
+
   <!-- Importar CSV -->
   <section class="bg-white border-2 border-brand-red rounded-2xl p-5 sm:p-6 mb-6">
     <h2 class="text-sm font-bold text-ink mb-1">Importar CSV</h2>
