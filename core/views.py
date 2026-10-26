@@ -123,6 +123,8 @@ def script_generator(request):
         'olt_data': olt_data(),
         'dedicado_options': [('nao', 'Não'), ('sim', 'Sim')],
         'gpon_options': ['UP', 'DOWN'],
+        # Link rádio (não é GPON): no lugar de GPON, Compatibilidade e CTO vai a Base (torre) do SIS.
+        'tecnologia_options': [('fibra', 'Fibra'), ('radio', 'Rádio')],
         # Só na Mudança de plano e na Instalação (Sim/Não, padrão Não).
         'equip_groups': [('roteador', 'Roteador?'), ('rb', 'RB?'), ('ata', 'ATA?')],
         'tratativa_options': [
@@ -152,6 +154,7 @@ def script_generator(request):
             ('ativo', 'Ativo do equipamento'),
             ('compat', 'Compatibilidade'),
             ('cto', 'CTO'),
+            ('base', 'Base (rádio)'),
             ('tel', 'Tel'),
             ('endereco', 'Endereço'),
             ('horario', 'Horário de atendimento'),
