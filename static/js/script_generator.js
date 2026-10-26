@@ -154,10 +154,10 @@
     return /\bhome\b|\bbus(iness|\.)?\s*combo\b/.test(fold(plano || ''));
   }
 
-  // Link dedicado (Dedicado, Corporativo+, Banda IP, BGP, Clear Channel, IP Ethernet, Rede Metro)
-  // não é GPON: não tem OLT, ONU nem CTO. Mesma lista do app Rotas Premium (script_parser.js).
+  // Link dedicado (Dedicado, Corporativo+, Banda IP, BGP, Clear Channel, IP Ethernet) não é GPON:
+  // não tem OLT, ONU nem CTO. Mesma lista do app Rotas Premium (script_parser.js). "Fibra Corporativo" é GPON.
   function isDedicado(plano) {
-    return /dedicado|corporativo\s*(\+|plus)|banda ip|bgp|clear channel|ip ethernet|rede metro/.test(fold(plano || ''));
+    return /dedicado|corporativo\s*(\+|plus)|banda ip|bgp|clear channel|ip ethernet/.test(fold(plano || ''));
   }
 
   // { compat: 'OLT ZTE - ONU ZG / ...', avisos: [...] } a partir do hostname e/ou cidade.
