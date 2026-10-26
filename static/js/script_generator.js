@@ -154,9 +154,16 @@
     return /\bhome\b|\bbus(iness|\.)?\s*combo\b/.test(fold(plano || ''));
   }
 
+  // Link dedicado (Dedicado, Corporativo+, Banda IP, BGP, Clear Channel, IP Ethernet, Rede Metro)
+  // não é GPON: não tem OLT, ONU nem CTO. Mesma lista do app Rotas Premium (script_parser.js).
+  function isDedicado(plano) {
+    return /dedicado|corporativo\s*(\+|plus)|banda ip|bgp|clear channel|ip ethernet|rede metro/.test(fold(plano || ''));
+  }
+
   // { compat: 'OLT ZTE - ONU ZG / ...', avisos: [...] } a partir do hostname e/ou cidade.
-  // Plano combo: 'DS / ONU Integrada / Kit (ZG)'.
+  // Plano combo: 'DS / ONU Integrada / Kit (ZG)'. Plano dedicado: '-'.
   function compatibilidade(hostname, cidadeRaw, cidade, plano) {
+    if (isDedicado(plano)) return { compat: '-', avisos: [] };
     const fabricantes = OLT_DATA.fabricantes || {};
     let fabs = [];
     let origem = '';
@@ -731,6 +738,8 @@
     sisEndereco = parsed.endereco;
     if (!$('keep-endereco').checked) parsed.endereco = '';
     fieldIds.forEach((id) => { $('f-' + id).value = parsed[id] || ''; });
+    // Plano dedicado marca "Cliente dedicado" (Ativo, Compatibilidade e CTO "-", sem GPON); dá para desmarcar.
+    if (isDedicado(parsed.plano)) document.querySelector('input[name="dedicado"][value="sim"]').checked = true;
     // Não sobrescreve um ADM digitado à mão.
     const adm = $('f-adm');
     if (!adm.value.trim() || adm.dataset.auto === '1') {
