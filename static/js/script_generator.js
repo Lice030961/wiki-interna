@@ -20,6 +20,8 @@
   const PHONE_RE = /\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/;
 
   const $ = (id) => document.getElementById(id);
+  // Fibra/Rádio é automático: Rádio quando a ficha do SIS tem a linha Base (ou PPPoE .radio).
+  let radioSis = false;
   const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'compat', 'cto', 'base', 'endereco', 'responsavel', 'tel'];
   // Tratativas cujo texto colado é o e-mail da solicitação (campos "p-...") e os campos de cada uma.
   const EMAIL_MODES = {
@@ -199,14 +201,14 @@
     return { compat, avisos };
   }
 
-  // Link rádio: não é GPON (sem OLT, ONU nem CTO). O maior indicador é a linha "Base  Base TTI.Torre ..."
-  // da ficha do SIS (a torre que atende o cliente); o PPPoE às vezes tem ".radio" ("cliente.radio@").
-  // Só vale com o valor "Base <torre>" como o SIS mostra, e nunca com GPON/OLT no nome.
+  // Link rádio: não é GPON (sem OLT, ONU nem CTO). A ficha do SIS só tem a linha "Base" no link rádio
+  // ("Base  Base TTI.Torre ..." ou "Base São Lucas II"); na fibra vem Hostname/CTO no lugar. O PPPoE às
+  // vezes tem ".radio" ("cliente.radio@"). Nunca com GPON/OLT no nome.
   function baseRadio(lines) {
-    // Copiado com um espaço só ("Base Base São Lucas II"), o rótulo não separa: tira o "Base " repetido.
-    const valor = find(lines, 'base') || ((lines.find((l) => /^base\s+base\s+\S/i.test(l)) || '').replace(/^base\s+/i, ''));
-    if (!/^base\s+\S/i.test(valor) || /gpon|\bolt\b/i.test(valor)) return '';
-    return valor.replace(/^base\s+/i, '').trim();
+    const linha = lines.find((l) => /^base(\s*:|\s+\S)/i.test(l));
+    if (!linha) return '';
+    const valor = linha.replace(/^base\s*:?\s*/i, '').replace(/^base\s+/i, '').trim();
+    return /gpon|\bolt\b/i.test(valor) ? '' : valor;
   }
 
   function formatPppoe(login) {
@@ -662,8 +664,7 @@
 
   function render() {
     // Os avisos são de OLT/CTO: no rádio (só nos modos do SIS) não se aplicam.
-    const radioSis = !emailMode() && selected('tecnologia') === 'radio';
-    renderAvisos(radioSis ? [] : oltAvisos);
+    renderAvisos(!emailMode() && radioSis ? [] : oltAvisos);
     const mode = emailMode();
     if (mode) {
       renderEmail(mode);
@@ -676,7 +677,7 @@
     const gponFixo = tratativa === 'navegacao' || tratativa === 'lentidao';
     const gpon = !needsGpon ? '' : gponFixo ? 'UP' : selected('gpon');
 
-    const radio = selected('tecnologia') === 'radio';
+    const radio = radioSis;
     $('gpon-group').classList.toggle('hidden', !needsGpon || gponFixo);
     $('gpon-legend').textContent = radio ? 'Base' : 'GPON';
     // Rádio: Base no lugar de Compatibilidade e CTO.
@@ -764,8 +765,8 @@
     sisEndereco = parsed.endereco;
     if (!$('keep-endereco').checked) parsed.endereco = '';
     fieldIds.forEach((id) => { $('f-' + id).value = parsed[id] || ''; });
-    // Base no SIS (ou PPPoE ".radio") marca Rádio; senão Fibra. O analista pode trocar.
-    document.querySelector('input[name="tecnologia"][value="' + (parsed.radio ? 'radio' : 'fibra') + '"]').checked = true;
+    // Base no SIS (ou PPPoE ".radio") = Rádio; Hostname/CTO = Fibra.
+    radioSis = parsed.radio;
     // Plano dedicado marca "Cliente dedicado" (Ativo, Compatibilidade e CTO "-", sem GPON); dá para desmarcar.
     if (isDedicado(parsed.plano)) document.querySelector('input[name="dedicado"][value="sim"]').checked = true;
     // Não sobrescreve um ADM digitado à mão.
@@ -824,7 +825,7 @@
     ['dedicado', 'roteador', 'rb', 'ata'].forEach((name) => {
       document.querySelector('input[name="' + name + '"][value="nao"]').checked = true;
     });
-    document.querySelector('input[name="tecnologia"][value="fibra"]').checked = true;
+    radioSis = false;
     $('keep-endereco').checked = true;
     if (!syncMode()) reparse();
     $('f-sis').focus();

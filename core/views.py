@@ -124,7 +124,6 @@ def script_generator(request):
         'dedicado_options': [('nao', 'Não'), ('sim', 'Sim')],
         'gpon_options': ['UP', 'DOWN'],
         # Link rádio (não é GPON): no lugar de GPON, Compatibilidade e CTO vai a Base (torre) do SIS.
-        'tecnologia_options': [('fibra', 'Fibra'), ('radio', 'Rádio')],
         # Só na Mudança de plano e na Instalação (Sim/Não, padrão Não).
         'equip_groups': [('roteador', 'Roteador?'), ('rb', 'RB?'), ('ata', 'ATA?')],
         'tratativa_options': [

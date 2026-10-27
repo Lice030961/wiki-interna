@@ -35,18 +35,6 @@
 
       <div id="gpon-row" class="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <fieldset>
-          <legend class="text-sm font-bold text-ink mb-2">Tecnologia</legend>
-          <div class="flex gap-2">
-            {% for value, label in tecnologia_options %}
-            <label class="cursor-pointer">
-              <input type="radio" name="tecnologia" value="{{ value }}" class="peer sr-only" {% if value == 'fibra' %}checked{% endif %} />
-              <span class="px-4 h-10 inline-flex items-center rounded-full border-2 border-brand-red text-sm font-semibold text-ink hover:border-brand-yellow peer-checked:border-brand-red peer-checked:bg-brand-red peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand-yellow transition">{{ label }}</span>
-            </label>
-            {% endfor %}
-          </div>
-        </fieldset>
-
-        <fieldset>
           <legend class="text-sm font-bold text-ink mb-2">Cliente dedicado?</legend>
           <div class="flex gap-2">
             {% for value, label in dedicado_options %}
