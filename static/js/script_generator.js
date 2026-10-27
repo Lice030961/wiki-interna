@@ -157,7 +157,7 @@
   // Link dedicado (Dedicado, Corporativo+, Banda IP, BGP, Clear Channel, IP Ethernet) não é GPON:
   // não tem OLT, ONU nem CTO. Mesma lista do app Rotas Premium (script_parser.js). "Fibra Corporativo" é GPON.
   function isDedicado(plano) {
-    return /dedicado|corporativo\s*(\+|plus)|banda ip|bgp|clear channel|ip ethernet/.test(fold(plano || ''));
+    return /dedicado|corporativo\s*(\+|plus)|banda ip|\bbgp\b|clear channel|ip ethernet/.test(fold(plano || ''));
   }
 
   // { compat: 'OLT ZTE - ONU ZG / ...', avisos: [...] } a partir do hostname e/ou cidade.
@@ -203,7 +203,8 @@
   // da ficha do SIS (a torre que atende o cliente); o PPPoE às vezes tem ".radio" ("cliente.radio@").
   // Só vale com o valor "Base <torre>" como o SIS mostra, e nunca com GPON/OLT no nome.
   function baseRadio(lines) {
-    const valor = find(lines, 'base');
+    // Copiado com um espaço só ("Base Base São Lucas II"), o rótulo não separa: tira o "Base " repetido.
+    const valor = find(lines, 'base') || ((lines.find((l) => /^base\s+base\s+\S/i.test(l)) || '').replace(/^base\s+/i, ''));
     if (!/^base\s+\S/i.test(valor) || /gpon|\bolt\b/i.test(valor)) return '';
     return valor.replace(/^base\s+/i, '').trim();
   }
