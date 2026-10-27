@@ -20,7 +20,7 @@
   const PHONE_RE = /\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/;
 
   const $ = (id) => document.getElementById(id);
-  // Fibra/Rádio é automático: Rádio quando a ficha do SIS tem a linha Base (ou PPPoE .radio).
+  // Fibra/Rádio é automático: Rádio quando a ficha do SIS tem a linha Base (e não tem Hostname/CTO).
   let radioSis = false;
   const fieldIds = ['nome', 'pppoe', 'plano', 'ativo', 'compat', 'cto', 'base', 'endereco', 'responsavel', 'tel'];
   // Tratativas cujo texto colado é o e-mail da solicitação (campos "p-...") e os campos de cada uma.
@@ -202,8 +202,8 @@
   }
 
   // Link rádio: não é GPON (sem OLT, ONU nem CTO). A ficha do SIS só tem a linha "Base" no link rádio
-  // ("Base  Base TTI.Torre ..." ou "Base São Lucas II"); na fibra vem Hostname/CTO no lugar. O PPPoE às
-  // vezes tem ".radio" ("cliente.radio@"). Nunca com GPON/OLT no nome.
+  // ("Base  Base TTI.Torre ..." ou "Base São Lucas II"); na fibra vem Hostname/CTO no lugar. Nunca com
+  // GPON/OLT no nome.
   function baseRadio(lines) {
     const linha = lines.find((l) => /^base(\s*:|\s+\S)/i.test(l));
     if (!linha) return '';
@@ -258,15 +258,17 @@
 
     // "Hostname  LT-G01-FAT003-SP" = a OLT do cliente (exata, mesmo em cidade com dois fabricantes).
     const host = find(lines, 'hostname').match(HOSTNAME_RE);
-    out.base = baseRadio(lines);
-    // Rádio: Compatibilidade e CTO ficam calculadas, mas escondidas (voltam se o analista marcar Fibra).
-    out.radio = !!out.base || /\.radio@/i.test(out.pppoe);
+    // Hostname ou CTO na ficha = fibra (GPON), mesmo que alguma linha comece com "Base".
+    const t = cto(lines);
+    const fibra = !!host || !!t.cto;
+    out.base = fibra ? '' : baseRadio(lines);
+    // O PPPoE ".radio" não decide: cliente que migrou para a fibra pode manter o login antigo.
+    out.radio = !fibra && !!out.base;
     // Sem Ativo e sem Hostname = cliente dedicado, que não tem OLT: não busca pela cidade.
     const cidadeRaw = find(lines, 'cidade');
     const c = !ativos.length && !host ? { compat: '', avisos: [] }
       : compatibilidade(host ? host[0] : '', cidadeRaw, matchCity(cidadeRaw), out.plano);
     out.compat = c.compat;
-    const t = cto(lines);
     out.cto = t.cto;
     out.avisos = c.avisos.concat(t.avisos);
     return out;
@@ -765,7 +767,7 @@
     sisEndereco = parsed.endereco;
     if (!$('keep-endereco').checked) parsed.endereco = '';
     fieldIds.forEach((id) => { $('f-' + id).value = parsed[id] || ''; });
-    // Base no SIS (ou PPPoE ".radio") = Rádio; Hostname/CTO = Fibra.
+    // Base no SIS = Rádio; Hostname/CTO = Fibra.
     radioSis = parsed.radio;
     // Plano dedicado marca "Cliente dedicado" (Ativo, Compatibilidade e CTO "-", sem GPON); dá para desmarcar.
     if (isDedicado(parsed.plano)) document.querySelector('input[name="dedicado"][value="sim"]').checked = true;
