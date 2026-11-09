@@ -79,6 +79,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="{% static 'js/batimento.js' %}?v={{ js_version }}"></script>
+<script src="{% static 'vendor/xlsx.full.min.js' %}"></script>
+<script src="{% static 'js/batimento.js' %}?v={{ js_version }}" data-exceljs="{% static 'vendor/exceljs.min.js' %}"></script>
 {% endblock %}

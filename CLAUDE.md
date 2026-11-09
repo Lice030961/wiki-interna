@@ -5,10 +5,10 @@ Company-internal wiki platform. Red, Yellow and White themed. Two fixed accounts
 
 ## Stack
 - **Backend**: Django 5.2 (Python 3.10)
-- **Frontend**: Django templates + Tailwind CSS (CDN Play) + vanilla JavaScript
+- **Frontend**: Django templates + Tailwind CSS v3 **compilado** (`static/css/app.css`, ver "Estáticos") + vanilla JavaScript. Nada de CDN: fontes Inter em `static/fonts/`, SortableJS/SheetJS/ExcelJS em `static/vendor/` — a wiki funciona num servidor interno sem internet
 - **Database**: SQLite locally (`db.sqlite3`); Postgres in production via `DATABASE_URL` (`dj-database-url`)
 - **File uploads**: `MEDIA_ROOT` → `media/uploads/` locally; Cloudflare R2 (S3-compatible, via `django-storages`) in production when `R2_ACCESS_KEY_ID` is set
-- **Static files**: WhiteNoise (`CompressedManifestStaticFilesStorage`) — no Nginx needed
+- **Static files**: WhiteNoise (`CompressedManifestStaticFilesStorage` em produção, nomes com hash; em dev/testes `StaticFilesStorage` + `runserver_nostatic` com `max-age=0`, então nunca roda JS/CSS velho do cache) — no Nginx needed
 - **Production server**: Gunicorn, deployed on Render (`render.yaml`)
 - **Chatbot (RAG)**: Cloudflare Workers AI — embeddings (`bge-m3`), chat (`llama-3.3-70b-instruct`), vision (`llama-3.2-11b-vision`) — see `core/chatbot.py`
 
@@ -32,6 +32,7 @@ Admin user is created directly in the database. Password is managed via Django A
 | `/login/` | Login page |
 | `/topico/<major_slug>/` | Major topic page (Layer 2) |
 | `/topico/<major_slug>/<minor_slug>/` | Minor topic page (Layer 3) |
+| `/healthz/` | Alvo do UptimeRobot: resposta fixa, **zero queries** (teste `assertNumQueries(0)`) |
 | `/busca/?q=<query>` | Search JSON API |
 | `/chat/` | Chatbot JSON API (RAG over wiki content) |
 | `/ferramentas/gerador-sa/` | Gerador de Script de SA (client-side only) |
@@ -67,7 +68,7 @@ Admins add blocks via `/admin-wiki/topico/<major>/<minor>/conteudo/`. Block type
 Ferramentas não são tópicos nem têm `ContentBlock`, então tudo sobre elas vem da lista `TOOLS` em `core/tools.py` (nome, `url_name`, descrição, palavras-chave). Esse registro alimenta: o menu "Ferramentas" da barra lateral (context processor `tools_context`), a busca do header (`search_tools`, resultados com rótulo "Ferramentas") e o chatbot (`_tools_context` em `chatbot.py`, casamento léxico pelo nome/palavras-chave; "ferramenta(s)" traz todas; a ferramenta vira fonte com link). **Nova ferramenta:** criar view + URL e adicionar uma entrada em `TOOLS` — nada mais.
 
 ## Gerador de Script de SA
-`/ferramentas/gerador-sa/` monta o script de abertura de SA do Salesforce a partir do texto da ficha do cliente copiado do SIS (Ctrl+A, Ctrl+C, com o "Mostrar" dos Ativos aberto). O parser fica em `static/js/script_generator.js` e roda **só no navegador**: nada de dados de cliente vai ao servidor, e o código não chama nem referencia nenhum sistema interno (só procura rótulos no texto colado). Não adicionar integração direta com o SIS/NOC — os endpoints internos não podem aparecer neste repo público.
+`/ferramentas/gerador-sa/` monta o script de abertura de SA do Salesforce a partir do texto da ficha do cliente copiado do SIS (Ctrl+A, Ctrl+C, com o "Mostrar" dos Ativos aberto). O parser fica em `static/js/sa_parser.js` (funções puras, `createSAParser(olt_data)`, roda no navegador e no Node — testes em `tests_js/sa_parser.test.js`, só com dados **fictícios**) e a tela em `static/js/script_generator.js`; tudo roda **só no navegador**: nada de dados de cliente vai ao servidor, e o código não chama nem referencia nenhum sistema interno (só procura rótulos no texto colado). Não adicionar integração direta com o SIS/NOC — os endpoints internos não podem aparecer neste repo público.
 
 Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mail"; o plano é o serviço aberto (linha antes de "Adicionais do Contrato", já que um ADM pode ter vários links); "Manter endereço do SIS" (marcado por padrão) pode ser desmarcado quando o SIS repete o mesmo endereço em todos os links; PPPoE `@desktop.com.br` é encurtado até o `@` (outros domínios ficam completos); endereço sempre `Rua, número - Bairro - Cidade/SP`; cliente dedicado → Ativo `-` e sem GPON; Mudança de ponto também não leva GPON; Navegação ("SEM NAVEGAÇÃO") e Lentidão escondem a escolha e usam sempre GPON UP (o cliente está conectado); botões na ordem Conexão, Oscilação (UP/DOWN) → Navegação, Lentidão (só UP) → Mudança de ponto (sem GPON); Obs "LIBERAR TÉCNICO" escreve "NECESSÁRIO LIBERAR TÉCNICO".
 
@@ -85,7 +86,7 @@ Regras: ADM vem da "Área do Assinante (SAC)"; o nome é a linha antes de "E-mai
 
 Obs "LIGAR ANTES DE IR AO LOCAL" (todos os modos): com um único telefone, acrescenta ` - <telefone>`.
 
-Fluxo da página: toda mudança de botão passa por `syncMode()` (troca modelo/campos/texto se o modo mudou, senão só `render()`), e ela também roda ao abrir a página (o navegador pode restaurar botões e texto). A caixa de texto é uma só, mas a ficha do SIS e o e-mail guardam cada um o seu texto (`texts.sis`/`texts.email`) — trocar de tratativa nunca lê um como o outro. O `<script>` leva `?v=<mtime do arquivo>` (`js_version` na view) para o navegador nunca rodar um JS antigo do cache.
+Fluxo da página: toda mudança de botão passa por `syncMode()` (troca modelo/campos/texto se o modo mudou, senão só `render()`), e ela também roda ao abrir a página (o navegador pode restaurar botões e texto). A caixa de texto é uma só, mas a ficha do SIS e o e-mail guardam cada um o seu texto (`texts.sis`/`texts.email`) — trocar de tratativa nunca lê um como o outro. Os `<script>` levam `?v=<mtime mais recente de sa_parser.js/script_generator.js>` (`_js_version` na view) para o navegador nunca rodar um JS antigo do cache.
 
 ## Batimento de SAs
 `/ferramentas/batimento/` filtra o .xlsx de SAs exportado do Power BI e devolve as linhas prontas para colar na planilha compartilhada do batimento. Roda **só no navegador** (`static/js/batimento.js`): leitura com SheetJS (o ExcelJS não abre o export do Power BI) e ExcelJS carregado sob demanda só para o "Baixar .xlsx" (que grava o menu suspenso de STATUS). Nada da planilha vai ao servidor.
@@ -134,37 +135,30 @@ Visual language follows `DESIGN.md` (Pinterest design system) **but with the Des
 
 **Observações:**
 - `DESIGN.md` (raiz) é o design system do Pinterest, gerado com `npx getdesign@latest add pinterest` (Node.js LTS instalado via winget)
-- Em dev, o navegador pode usar `chat.js`/`theme.css` antigos do cache — Ctrl+F5 (em produção o WhiteNoise versiona os arquivos)
 - O sub-tópico "Localizar Cliente" mostra o mapa de regionais porque está marcado `is_territory_map` no banco — não é bug do revamp
 - O git local usa o e-mail `giovaniolivr@gmail.com` (commits antigos, até `b73cb8b`, saíram com `gibinha.jesus@gmail.com`)
 
-## Pendências conhecidas
+## Segurança e limites (comparado com o app Rotas Premium, 09/11/2026)
+A leitura da wiki é **pública de propósito** (não é vital ao setor, é só consulta) — não exigir login nas páginas.
+- **Login** (`core/ratelimit.py`, LocMemCache): bloqueia 15 min depois de 5 falhas por IP **ou** 10 por usuário (o IP vem do `X-Forwarded-For`, que dá para inventar). `?next=` só volta para endereços do próprio site.
+- **Chat** (`/chat/`): cada pergunta gasta cota do Workers AI → limite por IP de 6/min e 60/h (429 com `error`, que o `chat.js` mostra).
+- **Uploads**: arquivos acima de 2,5 MB vão para arquivo temporário em disco, não para a RAM (o Render free tem 512 MB); máximo `MAX_UPLOAD_SIZE` (500 MB) e extensão conferida por tipo de bloco (imagem/vídeo) em `admin_topics._upload_error`.
+- **Produção**: `HTTPS` (padrão `True` com `DEBUG=False`) liga redirect para HTTPS, cookies `Secure`, HSTS 30 dias. **Servidor interno só HTTP** (`run_production.bat`/waitress): `HTTPS=False` no `.env`, senão o login não funciona. `SECRET_KEY` ausente em produção só gera aviso (trocar a chave do Render ainda está pendente).
+- **Neon**: `conn_max_age=0` (conexão aberta segura o compute acordado); ping só em `/healthz/` (ou `/login/`, que também não consulta o banco sem cookie).
+- `GZipMiddleware` (HTML/JSON comprimido, menos tráfego na cota do Render) e `LOGGING` para o stdout (com `DEBUG=False`, erro 500 aparece com traceback no log do Render).
 
-### 1. Tailwind CDN → arquivo estático (ainda não feito)
-Atualmente o CSS é carregado via CDN (`cdn.tailwindcss.com`). Se o servidor de destino não tiver acesso à internet, o site fica sem estilo. Resolver quando necessário:
+## Testes
+```bash
+python manage.py test core                 # páginas, login/chat com limite, uploads, import de OLT/GPON, /healthz/ sem banco, collectstatic de produção
+node --test tests_js/sa_parser.test.js     # parser do Gerador SA (fichas/e-mails fictícios)
+```
+O teste `test_collectstatic_de_producao` roda o storage com manifest: falha se um CSS/JS aponta para arquivo inexistente (ex.: `sourceMappingURL` de biblioteca nova em `static/vendor/` — apagar a linha). Os testes nunca chamam o Workers AI (mock). **Nunca colocar fichas, e-mails ou listas reais nos testes** (repo espelhado em público).
 
-1. Baixar o executável standalone em https://github.com/tailwindlabs/tailwindcss/releases (`tailwindcss-windows-x64.exe`) — não precisa de Node.js
-2. Gerar o CSS:
-   ```bash
-   tailwindcss.exe -i - -o static/css/tailwind.css --content "templates/**/*.html" --minify
-   ```
-3. Em `templates/base.html`, substituir as duas tags do Tailwind por:
-   ```html
-   <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
-   ```
-4. Rodar `python manage.py collectstatic`
-
-> Se forem adicionadas classes Tailwind novas nos templates depois disso, rodar o passo 2 novamente.
-
-### 2. Organizar views.py (ainda não feito)
-`core/views.py` já tem mais de 600 linhas. Separar em:
-- `core/views/public.py` — home, search, chat, major_topic, minor_topic
-- `core/views/auth.py` — login_view, logout_view
-- `core/views/admin.py` — todo o painel admin (tópicos, blocos, glossário, regionais)
-- `core/views/__init__.py` — importa tudo para manter URLs funcionando sem alteração
-
-### 3. Configuração de produção (feito — hospedado no Render)
-O deploy já roda em produção via `render.yaml`: `DEBUG=False`, `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` lidos de env vars (com fallback automático para o hostname do Render), Gunicorn como servidor WSGI, WhiteNoise servindo estáticos (sem precisar de Nginx), Postgres via `DATABASE_URL` e mídia no Cloudflare R2. As env vars do chatbot (`CF_ACCOUNT_ID`, `CF_API_TOKEN`, etc.) precisam ser configuradas manualmente no painel do Render (não têm `generateValue` no `render.yaml`).
+## Estáticos (Tailwind compilado)
+- `static/css/input.css` (fontes Inter + `@tailwind`) → `static/css/app.css` (vai para o git; o build do Render não roda o Tailwind). Tokens em `tailwind.config.js` (os mesmos do Rotas Premium). CSS próprio continua em `theme.css`.
+- Depois de usar uma classe nova em `templates/`, `static/js/` ou `core/*.py`: `tools\tailwindcss.exe -i static/css/input.css -o static/css/app.css --minify` (`tools/` fora do git; release v3.4.17 `tailwindcss-windows-x64.exe` do GitHub — não precisa de Node). Classe montada por concatenação (`'bg-' + cor`) não é encontrada: escrever a classe inteira.
+- Biblioteca nova: baixar para `static/vendor/` (nunca CDN) e tirar o `//# sourceMappingURL`.
+- `.gitattributes` força LF (o `build.sh` roda no Linux do Render) e o `build.sh` tem bit de executável no git.
 
 ## Simulador de atendimento (projeto separado)
 
@@ -218,19 +212,25 @@ Plataforma separada para treinar fluxos de suporte de provedor de internet. **N�
 wiki/
 ├── core/                   # Main Django app
 │   ├── models.py           # MajorTopic, MinorTopic, ContentBlock, GlossaryTerm, Regiao/Territorio/Cidade
-│   ├── views.py            # All views (auth, public, admin) — still monolithic, see Pendências
+│   ├── views/              # public, auth, ferramentas, admin_topics, admin_regionais, admin_olts, helpers (__init__ reexporta tudo)
+│   ├── ratelimit.py        # limites de login e do chat
+│   ├── tests.py            # testes do servidor
 │   ├── chatbot.py           # RAG chatbot (Cloudflare Workers AI)
 │   ├── urls.py             # URL patterns
 │   └── management/commands/ # seed.py, seed_regionais.py, seed_chat_demo.py, backfill_embeddings.py
 ├── templates/
-│   ├── base.html           # Header, footer, search bar, chat widget
+│   ├── base.html           # Sidebar, header, search bar, chat widget
 │   ├── login.html          # Standalone login page
 │   ├── home.html           # Layer 1: search + topic cards
 │   ├── major_topic.html    # Layer 2
 │   ├── minor_topic.html    # Layer 3
 │   ├── regionais.html      # Special Layer 3 page for the region/territory/city map
 │   └── admin/              # Admin-only templates
-├── static/js/              # search.js, chat.js, admin_content_block.js (drag-and-drop)
+├── static/css/            # input.css → app.css (Tailwind compilado), theme.css
+├── static/js/              # sa_parser.js + script_generator.js (Gerador SA), batimento.js, search.js, chat.js, admin_content_block.js
+├── static/fonts/, static/vendor/  # Inter, SortableJS, SheetJS, ExcelJS (sem CDN)
+├── tests_js/               # node --test (parser do Gerador SA)
+├── tailwind.config.js      # tokens do Tailwind
 ├── media/uploads/          # Uploaded images & videos (local dev only — R2 in production)
 ├── wiki_project/           # Django project settings
 ├── render.yaml             # Render deploy config

@@ -36,3 +36,6 @@ olts*.csv
 # Lista de CTOs/GPON (dados reais, nunca no repo)
 GPON*.txt
 GPO*.txt
+
+# Tailwind CLI standalone (tools/tailwindcss.exe) — baixado à parte, não vai para o git
+tools/

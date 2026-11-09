@@ -24,7 +24,9 @@
   // Status encerrados: começam desmarcados e, marcados, ganham cada um um slider "desde N dias atrás" (0 = hoje ... MAX_DAYS), pelo termino_servico.
   const MAX_DAYS = 7;
   const DEFAULT_DAYS = 1;
-  const EXCELJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+  // ExcelJS 4.4.0 (static/vendor/), carregado só no "Baixar .xlsx". O endereço vem do template
+  // ({% static %} põe o hash do arquivo em produção).
+  const EXCELJS_URL = (document.currentScript && document.currentScript.dataset.exceljs) || '/static/vendor/exceljs.min.js';
 
   const $ = (id) => document.getElementById(id);
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();

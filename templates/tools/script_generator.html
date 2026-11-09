@@ -173,5 +173,6 @@
 
 {% block extra_js %}
 {{ olt_data|json_script:"olt-data" }}
+<script src="{% static 'js/sa_parser.js' %}?v={{ js_version }}"></script>
 <script src="{% static 'js/script_generator.js' %}?v={{ js_version }}"></script>
 {% endblock %}

@@ -37,7 +37,7 @@ Tools live in a single registry, [`core/tools.py`](core/tools.py). One entry (na
 | Layer | Technology |
 |---|---|
 | Backend | Django 5.2 (Python) |
-| Frontend | Django templates, Tailwind CSS, vanilla JavaScript |
+| Frontend | Django templates, Tailwind CSS (compiled, no CDN), vanilla JavaScript; fonts and libraries self-hosted |
 | Database | SQLite locally, PostgreSQL in production |
 | Media | Cloudflare R2 (S3-compatible, via `django-storages`) |
 | AI | Cloudflare Workers AI: embeddings, chat and vision models |
@@ -55,11 +55,25 @@ python manage.py seed --topicos  # admin user + demo topic structure
 python manage.py runserver       # http://127.0.0.1:8000
 ```
 
+Tests:
+
+```bash
+python manage.py test core       # server: pages, login/chat limits, uploads, OLT import, production collectstatic
+node --test tests_js/sa_parser.test.js   # SA script generator parser (fictional sample data)
+```
+
+CSS: `static/css/app.css` is compiled from `static/css/input.css` with the [Tailwind CLI standalone](https://github.com/tailwindlabs/tailwindcss/releases/tag/v3.4.17) (no Node.js needed) and committed. After using new classes:
+
+```bash
+tools	ailwindcss.exe -i static/css/input.css -o static/css/app.css --minify
+```
+
 Configuration is read from a `.env` file. Everything is optional for a local run:
 
 | Variable | Purpose |
 |---|---|
 | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` | Django basics |
+| `HTTPS` | `False` on an HTTP-only internal server (production defaults to HTTPS redirect + secure cookies) |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Admin account created by `seed` |
 | `DATABASE_URL` | Use PostgreSQL instead of SQLite |
 | `CF_ACCOUNT_ID`, `CF_API_TOKEN` | Enable the AI assistant |
@@ -70,3 +84,5 @@ Without the Cloudflare variables the wiki still works, but the assistant is disa
 ## Deployment
 
 `render.yaml` and `build.sh` deploy to Render: they install dependencies, collect static files, run migrations, ensure the admin user exists and backfill missing embeddings. Deploys never create or change content. Content is managed only through the admin panel.
+
+Uptime monitors should ping `/healthz/`: a fixed response that never touches the database.

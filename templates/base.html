@@ -6,38 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpg' %}" />
   <title>{% block title %}Wiki{% endblock %} — Wiki Interna</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-          colors: {
-            brand: {
-              red:    '#AC2407',
-              redhov: '#8f1d06',
-              yellow: '#EFBC00',
-              yellhov:'#d4a800',
-            },
-            // Neutros creme do DESIGN.md
-            ink:       '#000000',
-            body:      '#33332e',
-            mute:      '#62625b',
-            ash:       '#91918c',
-            stone:     '#c8c8c1',
-            hairline:  '#dadad3',
-            soft:      '#fbfbf9',
-            card:      '#f6f6f3',
-            secondary: '#e5e5e0',
-            pressed:   '#c8c8c1',
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}" />
   <link rel="stylesheet" href="{% static 'css/theme.css' %}" />
   {% block extra_head %}{% endblock %}
 </head>

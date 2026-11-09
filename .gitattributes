@@ -1,0 +1,8 @@
+# LF sempre: o build.sh roda no Linux do Render (CRLF quebra o bash).
+* text=auto eol=lf
+*.bat text eol=crlf
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary

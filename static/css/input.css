@@ -1,0 +1,16 @@
+/* Fonte do Tailwind da wiki. O app.css compilado vai para o git (o build do Render não roda o Tailwind):
+     tools\tailwindcss.exe -i static/css/input.css -o static/css/app.css --minify
+   (tools/tailwindcss.exe = release v3.4.17 "tailwindcss-windows-x64.exe" do GitHub, fora do git)
+   Rodar de novo sempre que usar uma classe nova em templates/, static/js/ ou core/.
+   CSS próprio (barra lateral, glossário, chat...) continua em theme.css. */
+
+/* Inter servida pelo próprio site (Fontsource, subset latin): sem Google Fonts, funciona num servidor interno sem internet. */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fonts/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fonts/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url('../fonts/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/inter-700.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 800; font-display: swap; src: url('../fonts/inter-800.woff2') format('woff2'); }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Editar Conteúdo – {{ topic.title }}{% endblock %}
 
 {% block extra_head %}
@@ -191,7 +192,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="{% static 'vendor/Sortable.min.js' %}"></script>
 <script>
 // ── Variáveis globais (declaradas primeiro) ───────────────────────────────────
 var activeTextareaId = null;

@@ -6,23 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpg' %}" />
   <title>Login — Wiki Interna</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-          colors: {
-            brand: { red: '#AC2407', redhov: '#8f1d06', yellow: '#EFBC00', yellhov: '#d4a800' },
-            ink: '#000000', body: '#33332e', mute: '#62625b', ash: '#91918c', hairline: '#dadad3', card: '#f6f6f3',
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}" />
 </head>
 <body class="bg-brand-red min-h-screen flex items-center justify-center p-4 antialiased">
   <div class="w-full max-w-sm">
