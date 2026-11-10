@@ -9,7 +9,6 @@
 
     // PPPoE desse domínio (plano não legado) é encurtado até o "@".
     const SHORT_PPPOE_DOMAIN = 'desktop.com.br';
-    const DEFAULT_RESPONSAVEL = 'Quem estiver no local';
     const SOLICITACAO = {
       conexao: 'SEM ACESSO',
       navegacao: 'SEM NAVEGAÇÃO',
@@ -508,7 +507,6 @@
 
     return {
       SHORT_PPPOE_DOMAIN,
-      DEFAULT_RESPONSAVEL,
       SOLICITACAO,
       OBS_LIGAR,
       SOLICITANTE_SUFIXO,

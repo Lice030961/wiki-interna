@@ -12,13 +12,14 @@
     instalacao: ['nome', 'plano_novo', 'prospect', 'compat', 'tel', 'endereco', 'complemento', 'horario', 'responsavel'],
   };
   const emailIds = [...new Set(Object.values(EMAIL_MODES).flat())];
-  // Podem ficar vazios: têm valor padrão ou são preenchidos à mão só quando existem.
-  const emailOpcionais = ['complemento', 'horario', 'responsavel'];
+  // Pode ficar vazio: preenchido à mão só quando existe. Horário e Responsável não têm
+  // valor padrão: ficam vazios (amarelos) até o e-mail trazer ou o analista preencher.
+  const emailOpcionais = ['complemento'];
 
   // Parser (static/js/sa_parser.js, carregado antes): funções puras, testadas em tests_js/.
   const parser = createSAParser(JSON.parse(($('olt-data') || {}).textContent || '{}'));
   const {
-    DEFAULT_RESPONSAVEL, OBS_LIGAR, SOLICITACAO, SOLICITANTE_SUFIXO,
+    OBS_LIGAR, SOLICITACAO, SOLICITANTE_SUFIXO,
     parse, parseEmail, parseProspect, isProspect, isDedicado,
   } = parser;
 
@@ -115,8 +116,8 @@
         'Endereço: ' + v.endereco,
         'Complemento: ' + v.complemento,
         '',
-        'Horario de atendimento: ' + (v.horario || 'Administrativo'),
-        'Responsavel: ' + (v.responsavel || DEFAULT_RESPONSAVEL),
+        'Horario de atendimento: ' + v.horario,
+        'Responsavel: ' + v.responsavel,
         'CONTATO: ' + phoneLines(v.tel),
         '',
         'SOLICITAÇÃO: ' + SOLICITACAO.instalacao,
@@ -144,9 +145,9 @@
         'Endereço: ' + v.endereco,
         'Complemento: ' + v.complemento,
         '',
-        'Horário de atendimento: ' + (v.horario || 'Administrativo'),
+        'Horário de atendimento: ' + v.horario,
         '',
-        'Responsável: ' + (v.responsavel || DEFAULT_RESPONSAVEL),
+        'Responsável: ' + v.responsavel,
         'Contato: ' + phoneLines(v.tel),
         '',
         'SOLICITAÇÃO: ' + SOLICITACAO.plano,
@@ -155,6 +156,8 @@
       if (!v.ativo) pending.push('ativo');
     }
     if (!v.compat) pending.push('compatibilidade');
+    if (!v.horario) pending.push('horário');
+    if (!v.responsavel) pending.push('responsável');
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 
@@ -210,13 +213,13 @@
       v.compat = '-';
       v.cto = '-';
     }
-    if (!v.responsavel) v.responsavel = DEFAULT_RESPONSAVEL;
-
     ['adm'].concat(fieldIds).forEach((id) => {
       const el = $('f-' + id);
       // CTO com "?" = projeto sem sigla cadastrada.
-      markMissing(el, !el.disabled && id !== 'responsavel' && (!el.value.trim() || (id === 'cto' && el.value.includes('?'))));
+      markMissing(el, !el.disabled && (!el.value.trim() || (id === 'cto' && el.value.includes('?'))));
     });
+    const horario = $('f-horario').value.trim();
+    markMissing($('f-horario'), !horario);
 
     const obs = buildObs(v.tel);
     $('preview').value = [
@@ -232,7 +235,7 @@
       ...(radio ? ['Base: ' + v.base] : ['Compatibilidade: ' + v.compat, 'CTO: ' + v.cto]),
       '',
       'Endereço: ' + v.endereco,
-      'Horário de atendimento: ' + ($('f-horario').value.trim() || 'Administrativo'),
+      'Horário de atendimento: ' + horario,
       'Responsável: ' + v.responsavel,
       'CONTATO:',
       'Tel: ' + phoneLines(v.tel),
@@ -250,6 +253,8 @@
       if (!dedicado && !v.compat) pending.push('compatibilidade');
       if (!dedicado && (!v.cto || v.cto.includes('?'))) pending.push('CTO');
     }
+    if (!horario) pending.push('horário');
+    if (!v.responsavel) pending.push('responsável');
     $('pending').textContent = pending.length ? 'Falta: ' + pending.join(', ') : '';
   }
 

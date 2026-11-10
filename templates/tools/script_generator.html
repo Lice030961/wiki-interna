@@ -116,8 +116,6 @@
               {% endif %}
             </div>
             <input id="f-{{ id }}" type="text" autocomplete="off"
-                   {% if id == 'horario' %}placeholder="Administrativo"{% endif %}
-                   {% if id == 'responsavel' %}placeholder="Quem estiver no local"{% endif %}
                    {% if id == 'adm' %}inputmode="numeric" data-auto="1"{% endif %}
                    {% if id == 'compat' %}placeholder="OLT ... - ONU ..."{% endif %}
                    {% if id == 'cto' %}placeholder="GPON ... / SIGLA-0000 Porta 0"{% endif %}
@@ -131,8 +129,6 @@
           <div data-field="{{ id }}" class="{% if id == 'nome' or id == 'plano_novo' or id == 'endereco' or id == 'complemento' or id == 'compat' %}sm:col-span-2{% endif %}">
             <label for="p-{{ id }}" class="block text-xs font-semibold text-mute mb-1">{{ label }}</label>
             <input id="p-{{ id }}" type="text" autocomplete="off"
-                   {% if id == 'horario' %}placeholder="Administrativo"{% endif %}
-                   {% if id == 'responsavel' %}placeholder="Quem estiver no local"{% endif %}
                    {% if id == 'solicitante' %}placeholder="Nome Sobrenome"{% endif %}
                    {% if id == 'compat' %}placeholder="OLT ... - ONU ..."{% endif %}
                    {% if id == 'adm' or id == 'prospect' %}inputmode="numeric"{% endif %}
